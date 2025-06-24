@@ -1,5 +1,6 @@
 package com.sanjittech.hms.service;
 
+import com.sanjittech.hms.dto.MedicineDTO;
 import com.sanjittech.hms.model.Appointment;
 import com.sanjittech.hms.model.DoctorLog;
 import com.sanjittech.hms.model.Medicine;
@@ -34,22 +35,60 @@ public class DoctorLogService {
                 .filter(dl -> dl.getPatient().getPatientId().equals(patientId))
                 .map(dl -> {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("date", dl.getAppointment().getVisitDate());
+                    map.put("date", dl.getFollowUpDate() != null ? dl.getFollowUpDate() : dl.getAppointment().getVisitDate());
+                    map.put("diagnosis", dl.getDiagnosis() != null ? dl.getDiagnosis() : "N/A");
+                    map.put("reasonForVisit", dl.getReasonForVisit() != null ? dl.getReasonForVisit() : (dl.getAppointment() != null ? dl.getAppointment().getReasonForVisit() : "N/A"));
+
+                    // ✅ FETCH MEDICINES
                     List<Medicine> medicines = medicineRepo.findByDoctorLog_Id(dl.getId());
-                    map.put("medicines", medicines);
+
+                    // 🔍 DEBUG EACH MEDICINE
+                    for (Medicine m : medicines) {
+                        System.out.println("🟢 Medicine Found:");
+                        System.out.println("ID: " + m.getMedicineId());
+                        System.out.println("Name: " + m.getName());
+                        System.out.println("Dosage: " + m.getDosage());
+                        System.out.println("Duration: " + m.getDurationInDays());
+                        System.out.println("Frequency: " + m.getFrequency());
+                    }
+
+                    // ✅ CONVERT TO DTOs
+                    List<MedicineDTO> medicineDTOs = medicines.stream().map(med -> {
+                        MedicineDTO dto = new MedicineDTO();
+                        dto.setName(med.getName());
+                        dto.setDosage(med.getDosage());
+                        dto.setFrequency(med.getFrequency());
+                        dto.setDurationInDays(med.getDurationInDays());
+                        return dto;
+                    }).collect(Collectors.toList());
+
+                    map.put("medicines", medicineDTOs);
                     return map;
                 })
                 .sorted(Comparator.comparing(m -> (LocalDate) m.get("date")))
                 .collect(Collectors.toList());
     }
-
     public DoctorLog createLog(Long apptId, DoctorLog log) {
         Appointment appt = apptRepo.findById(apptId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
         log.setAppointment(appt);
         log.setPatient(appt.getPatient());
-        log.setDoctor(appt.getDoctor());
+
+        // Fallbacks if not provided by frontend
+        if (log.getReasonForVisit() == null || log.getReasonForVisit().isBlank()) {
+            log.setReasonForVisit(appt.getReasonForVisit());
+        }
+
+        if (log.getFollowUpDate() == null) {
+            log.setFollowUpDate(appt.getVisitDate());
+        }
+
+        if (log.getMedicines() != null) {
+            for (Medicine med : log.getMedicines()) {
+                med.setDoctorLog(log);
+            }
+        }
 
         return repo.save(log);
     }

@@ -22,6 +22,7 @@ public class Appointment {
     private LocalTime startTime;
     private LocalTime endTime;
     private String departmentId;
+    @Column(name = "reason_for_visit")
     private String reasonForVisit;
 
 

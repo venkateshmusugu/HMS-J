@@ -1,5 +1,6 @@
 package com.sanjittech.hms.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,7 @@ public class Medicine {
     private String frequency;
 
     @ManyToOne
+    @JsonIgnore
     @JoinColumn(name = "doctor_log_id")
     private DoctorLog doctorLog;
 

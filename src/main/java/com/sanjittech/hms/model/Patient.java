@@ -3,6 +3,7 @@ package com.sanjittech.hms.model;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,6 +27,7 @@ public class Patient {
     private String patientName;
     private String gender;
     private String phoneNumber;
+    @JsonProperty("age")
     private int age;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dob;
@@ -41,9 +43,10 @@ public class Patient {
     @JsonManagedReference
     private List<MedicalBill> bills;
 
-    @OneToMany(mappedBy = "patient")
+    // Optional reverse mapping
+    @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL)
     @JsonManagedReference
-    private List<Surgery> surgeries;
+    private List<Surgery> surgeries;;
 
     @OneToMany(mappedBy = "patient")
     @JsonManagedReference

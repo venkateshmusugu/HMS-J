@@ -41,12 +41,17 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/users/login",
                                 "/api/users/register",
-                                "/api/users/refresh-token", // ✅ Refresh-token allowed without authentication
+                                "/api/users/refresh-token",
                                 "/api/csrf",
                                 "/api/patients"
                         ).permitAll()
-                        .requestMatchers("/api/appointments/**","/api/appointments/upcoming").hasAnyRole("RECEPTIONIST", "DOCTOR", "ADMIN")
-                        .requestMatchers("/api/doctor-logs/**").hasRole("DOCTOR") // keep this line only for doctor logs
+
+                        .requestMatchers("/api/appointments/**", "/api/appointments/upcoming")
+                        .hasAnyRole("RECEPTIONIST", "DOCTOR", "ADMIN")
+
+                        .requestMatchers("/api/doctor-logs/**").hasRole("DOCTOR")
+                        .requestMatchers("/api/surgeries/**").hasRole("SURGERY")
+                        .requestMatchers("/api/surgery-logs/**").hasRole("SURGERY") // ✅ Add this line
 
                         .anyRequest().authenticated()
                 )

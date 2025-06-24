@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Data
@@ -23,10 +24,17 @@ public class Surgery {
     private String medication;
     private String reason;
     private String remarks;
+    private String diagnosis;
+    private LocalDate followUpDate;
+    @ElementCollection
+    private List<Medicine> medicines;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id")
     @JsonBackReference
     private Patient patient;
+
+
+
 }
 

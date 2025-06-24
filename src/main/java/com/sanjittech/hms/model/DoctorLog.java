@@ -1,6 +1,7 @@
 package com.sanjittech.hms.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,11 +22,13 @@ public class DoctorLog {
     private Long id;
 
     private String reasonForVisit;
+    @Column
     private String diagnosis;
     @OneToMany(mappedBy = "doctorLog", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Medicine> prescribedMedicines;
-
+    private List<Medicine> medicines;
+    @Column
     private boolean followUpRequired;
+    @Column
     private LocalDate followUpDate;
     private String testType;
 
@@ -35,8 +38,10 @@ public class DoctorLog {
     private Patient patient;
 
     @ManyToOne
+
     private Doctor doctor;
 
     @ManyToOne
+    @JsonIgnore
     private Appointment appointment;
 }
