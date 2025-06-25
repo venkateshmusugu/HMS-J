@@ -32,12 +32,12 @@ public class SurgeryAppointmentController {
         return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/by-id/{id}")
     public ResponseEntity<SurgeryAppointment> getOne(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.getById(id));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/by-patient/{id}")
     public ResponseEntity<SurgeryAppointment> update(@PathVariable Long id, @RequestBody SurgeryAppointment dto) {
         return ResponseEntity.ok(appointmentService.updateAppointment(id, dto));
     }

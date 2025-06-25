@@ -33,6 +33,7 @@ public class Appointment {
     private Patient patient;
 
     @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "doctor_id")
     @JsonIgnoreProperties(value = { "appointments" }) // If Doctor has appointments list too
     private Doctor doctor;
 }

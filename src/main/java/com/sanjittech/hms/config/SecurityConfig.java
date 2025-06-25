@@ -50,8 +50,8 @@ public class SecurityConfig {
                         .hasAnyRole("RECEPTIONIST", "DOCTOR", "ADMIN")
 
                         .requestMatchers("/api/doctor-logs/**").hasRole("DOCTOR")
-                        .requestMatchers("/api/surgeries/**").hasRole("SURGERY")
-                        .requestMatchers("/api/surgery-logs/**").hasRole("SURGERY") // ✅ Add this line
+                        .requestMatchers("/api/surgeries/**").hasAnyRole("SURGERY","DOCTOR")
+                        .requestMatchers("/api/surgery-logs/**","/api/surgery-appointments/**").hasAnyRole("SURGERY", "DOCTOR", "RECEPTIONIST") // ✅ Add this line
 
                         .anyRequest().authenticated()
                 )

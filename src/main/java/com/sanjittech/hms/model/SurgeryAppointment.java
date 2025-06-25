@@ -21,13 +21,15 @@ public class SurgeryAppointment {
 
     private LocalDate surgeryDate;
     private LocalTime surgeryTime;
-
+    private String reason;
+    private String remarks;
+    private LocalDate followUpDate;
     private String surgeryType;
-    private String status; // e.g. Scheduled, Completed, Cancelled
+    private String status;
+    private String diagnosis;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "patient_id")
-    @JsonIgnoreProperties("appointments") // Prevents Jackson infinite loop
     private Patient patient;
 
     @ManyToOne
@@ -36,8 +38,8 @@ public class SurgeryAppointment {
 
     public SurgeryAppointment(Long id) {
         this.id = id;
-
-
     }
-
 }
+
+
+
