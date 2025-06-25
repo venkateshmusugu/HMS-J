@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -21,5 +23,7 @@ public class Doctor {
     @ManyToOne
     @JoinColumn(name = "department_id") // Foreign key to the department table
     private Department department; // Reference to the Department entity
+
+
 }
 

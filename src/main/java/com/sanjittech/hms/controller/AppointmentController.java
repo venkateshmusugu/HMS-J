@@ -62,5 +62,18 @@ public class AppointmentController {
         return ResponseEntity.ok(appt);
     }
 
+    @GetMapping("/check-slot")
+    public ResponseEntity<Boolean> checkSlot(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam String startTime,
+            @RequestParam String endTime,
+            @RequestParam Long doctorId
+    ) {
+        boolean available = appointmentService.isSlotAvailable(date, startTime, endTime, doctorId);
+        return ResponseEntity.ok(available);
+    }
+
+
+
 
 }

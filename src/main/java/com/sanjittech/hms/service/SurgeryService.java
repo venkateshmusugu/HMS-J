@@ -27,39 +27,29 @@ public class SurgeryService {
     @Autowired
     private SurgeryAppointmentRepository appointmentRepo;
 
-    // Used only if creating surgery log directly without appointment
     public void bookSurgery(Long patientId, SurgeryLogDto dto) {
         Patient patient = patientRepo.findById(patientId)
                 .orElseThrow(() -> new RuntimeException("Patient not found"));
 
         Surgery surgery = Surgery.builder()
                 .patient(patient)
-                .surgeryDate(dto.getSurgeryDate())
-                .medication(dto.getMedication())
-                .reason(dto.getReason())
-                .remarks(dto.getRemarks())
+                .surgeryDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null)
+                .reason(dto.getReasonForSurgery())
                 .diagnosis(dto.getDiagnosis())
-                .followUpDate(dto.getFollowUpDate())
-                .medicines(dto.getMedicines() != null ? (List) dto.getMedicines() : List.of())
                 .build();
 
         surgeryRepo.save(surgery);
     }
 
-    // ✅ Recommended: Finalize a surgery by linking it to an appointment
     public Surgery logCompletedSurgery(Long appointmentId, SurgeryLogDto dto) {
         SurgeryAppointment appointment = appointmentRepo.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Surgery appointment not found"));
 
         Surgery surgery = Surgery.builder()
                 .patient(appointment.getPatient())
-                .surgeryDate(dto.getSurgeryDate())
-                .medication(dto.getMedication())
-                .reason(dto.getReason())
-                .remarks(dto.getRemarks())
+                .surgeryDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null)
+                .reason(dto.getReasonForSurgery())
                 .diagnosis(dto.getDiagnosis())
-                .followUpDate(dto.getFollowUpDate())
-                .medicines(dto.getMedicines() != null ? (List) dto.getMedicines() : List.of())
                 .build();
 
         surgeryRepo.save(surgery);
@@ -74,12 +64,9 @@ public class SurgeryService {
         Surgery surgery = surgeryRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Surgery not found"));
 
-        surgery.setSurgeryDate(dto.getSurgeryDate());
-        surgery.setMedication(dto.getMedication());
-        surgery.setReason(dto.getReason());
-        surgery.setRemarks(dto.getRemarks());
+        surgery.setSurgeryDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null);
+        surgery.setReason(dto.getReasonForSurgery());
         surgery.setDiagnosis(dto.getDiagnosis());
-        surgery.setFollowUpDate(dto.getFollowUpDate());
 
         return surgeryRepo.save(surgery);
     }
@@ -95,6 +82,17 @@ public class SurgeryService {
     public Surgery getSurgeryById(Long surgeryLogId) {
         return surgeryRepo.findById(surgeryLogId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Surgery not found"));
-
     }
+
+    public List<Surgery> getSurgeriesByPatient(Long patientId) {
+        return surgeryRepo.findByPatient_PatientId(patientId);
+    }
+
+    public List<SurgeryAppointment> getSurgeryAppointmentsByPatient(Long patientId) {
+        return appointmentRepo.findByPatientPatientId(patientId);
+    }
+
+
+
+
 }

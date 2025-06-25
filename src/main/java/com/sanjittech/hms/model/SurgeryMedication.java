@@ -20,6 +20,9 @@ public class SurgeryMedication {
     private String frequency;
     private int durationInDays;
     private LocalDate date;
+    private String comments;
+    private String diagnosis;
+
 
 
 }

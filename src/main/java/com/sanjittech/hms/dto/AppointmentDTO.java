@@ -12,4 +12,5 @@ public class AppointmentDTO {
         this.patientName = a.getPatient() != null ? a.getPatient().getPatientName() : null;
         this.doctorName = a.getDoctor() != null ? a.getDoctor().getDoctorName() : null;
     }
+
 }

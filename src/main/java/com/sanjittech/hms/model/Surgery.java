@@ -18,7 +18,7 @@ import java.util.List;
 public class Surgery {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long surgeryLogId;
+    private Long surgeryLogId; // ✅ Use correct name everywhere
 
     private LocalDate surgeryDate;
     private String medication;
@@ -26,15 +26,18 @@ public class Surgery {
     private String remarks;
     private String diagnosis;
     private LocalDate followUpDate;
-    @ElementCollection
-    private List<Medicine> medicines;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "patient_id")
     @JsonBackReference
     private Patient patient;
 
 
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "surgery_log_id")
+    private List<Medicine> medicines;
+
+    
+
 
 }
-

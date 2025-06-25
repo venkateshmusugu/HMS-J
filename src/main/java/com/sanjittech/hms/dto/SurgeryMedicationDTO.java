@@ -1,38 +1,40 @@
 package com.sanjittech.hms.dto;
 
+import jakarta.persistence.Column;
+
 import java.time.LocalDate;
 
 public class SurgeryMedicationDTO {
-    private Long id;
-    private Long surgeryAppointmentId;
-    private String name;
+    @Column(name = "diagnosis")
+    public String diagnosis;
+    private String medicineName;
     private String dosage;
-    private String frequency;
-    private int durationInDays;
-    private LocalDate date;
+    private String duration;
+    private String comments;
 
-    public Long getId() {
-        return id;
+    // Constructors
+    public SurgeryMedicationDTO(String name, String dosage, String duration, String comments,String diagnosis) {
+        this.medicineName = name;
+        this.dosage = dosage;
+        this.duration = duration;
+        this.comments = comments;
+        this.diagnosis= diagnosis;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public String getMedicineName() {
+        return medicineName;
     }
 
-    public Long getSurgeryAppointmentId() {
-        return surgeryAppointmentId;
+    public String getDiagnosis() {
+        return diagnosis;
     }
 
-    public void setSurgeryAppointmentId(Long surgeryAppointmentId) {
-        this.surgeryAppointmentId = surgeryAppointmentId;
+    public void setDiagnosis(String diagnosis) {
+        this.diagnosis = diagnosis;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+    public void setMedicineName(String medicineName) {
+        this.medicineName = medicineName;
     }
 
     public String getDosage() {
@@ -43,27 +45,19 @@ public class SurgeryMedicationDTO {
         this.dosage = dosage;
     }
 
-    public String getFrequency() {
-        return frequency;
+    public String getDuration() {
+        return duration;
     }
 
-    public void setFrequency(String frequency) {
-        this.frequency = frequency;
+    public void setDuration(String duration) {
+        this.duration = duration;
     }
 
-    public int getDurationInDays() {
-        return durationInDays;
+    public String getComments() {
+        return comments;
     }
 
-    public void setDurationInDays(int durationInDays) {
-        this.durationInDays = durationInDays;
-    }
-
-    public LocalDate getDate() {
-        return date;
-    }
-
-    public void setDate(LocalDate date) {
-        this.date = date;
+    public void setComments(String comments) {
+        this.comments = comments;
     }
 }

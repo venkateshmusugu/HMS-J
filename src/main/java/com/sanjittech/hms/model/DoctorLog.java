@@ -37,8 +37,8 @@ public class DoctorLog {
     @JsonBackReference
     private Patient patient;
 
-    @ManyToOne
 
+    @ManyToOne(fetch = FetchType.EAGER)
     private Doctor doctor;
 
     @ManyToOne
