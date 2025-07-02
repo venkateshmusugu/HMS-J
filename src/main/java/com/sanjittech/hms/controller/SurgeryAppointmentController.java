@@ -1,5 +1,6 @@
 package com.sanjittech.hms.controller;
 
+import com.sanjittech.hms.dto.SurgeryAppointmentDTO;
 import com.sanjittech.hms.model.SurgeryAppointment;
 import com.sanjittech.hms.service.SurgeryAppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,13 +19,16 @@ public class SurgeryAppointmentController {
     private SurgeryAppointmentService appointmentService;
 
     @PostMapping("/book/{patientId}")
-    public ResponseEntity<SurgeryAppointment> book(@PathVariable Long patientId, @RequestBody SurgeryAppointment dto) {
+    public ResponseEntity<SurgeryAppointment> book(@PathVariable Long patientId,
+                                                   @RequestBody SurgeryAppointmentDTO dto) {
         return ResponseEntity.ok(appointmentService.bookAppointment(patientId, dto));
     }
 
     @GetMapping("/by-date")
-    public ResponseEntity<List<SurgeryAppointment>> getByDate(@RequestParam("date") String dateStr) {
-        return ResponseEntity.ok(appointmentService.getAppointmentsByDate(LocalDate.parse(dateStr)));
+    public ResponseEntity<List<SurgeryAppointmentDTO>> getByDate(@RequestParam("date") String dateStr) {
+        LocalDate date = LocalDate.parse(dateStr);
+        List<SurgeryAppointmentDTO> result = appointmentService.getAppointmentsWithDoctorPatientNote(date);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/by-patient/{patientId}")
@@ -38,7 +42,8 @@ public class SurgeryAppointmentController {
     }
 
     @PutMapping("/by-patient/{id}")
-    public ResponseEntity<SurgeryAppointment> update(@PathVariable Long id, @RequestBody SurgeryAppointment dto) {
+    public ResponseEntity<SurgeryAppointment> update(@PathVariable Long id,
+                                                     @RequestBody SurgeryAppointmentDTO dto) {
         return ResponseEntity.ok(appointmentService.updateAppointment(id, dto));
     }
 

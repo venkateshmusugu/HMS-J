@@ -32,24 +32,19 @@ public class LoginController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> payload) {
         String username = payload.get("username");
         String password = payload.get("password");
         String role = payload.get("role");
 
         try {
-//            authenticationManager.authenticate(
-//                    new UsernamePasswordAuthenticationToken(username, password)
-//            );
-
             User user = userRepository.findByUsername(username).orElseThrow();
 
             if (!user.getRole().name().equalsIgnoreCase(role)) {
-                return ResponseEntity.status(403).body("Role mismatch");
+                return ResponseEntity.status(403).body(Map.of("error", "Role mismatch"));
             }
 
             String accessToken = jwtUtil.generateAccessToken(username, user.getRole().name());
-
             String refreshToken = jwtUtil.generateRefreshToken(username);
 
             Map<String, String> tokens = new HashMap<>();
@@ -59,10 +54,12 @@ public class LoginController {
             tokens.put("username", username);
 
             return ResponseEntity.ok(tokens);
+
         } catch (AuthenticationException e) {
-            return ResponseEntity.status(401).body("Invalid credentials");
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
     }
+
 
     @PostMapping("/refresh-token")
     public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> payload) {

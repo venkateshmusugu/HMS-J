@@ -1,6 +1,8 @@
 package com.sanjittech.hms.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,22 +24,24 @@ public class Surgery {
 
     private LocalDate surgeryDate;
     private String medication;
-    private String reason;
+    private String reasonForSurgery;
     private String remarks;
     private String diagnosis;
     private LocalDate followUpDate;
 
     @ManyToOne
     @JoinColumn(name = "patient_id")
-    @JsonBackReference
+    @JsonIgnoreProperties({"patient"})
     private Patient patient;
 
 
-    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "surgery_log_id")
-    private List<Medicine> medicines;
 
-    
+
+//    @OneToMany(mappedBy = "surgeryLog", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+//    private List<MedicalBillEntry> medications;
+
+
+
 
 
 }

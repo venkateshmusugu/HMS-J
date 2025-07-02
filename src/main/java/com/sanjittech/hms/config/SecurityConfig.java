@@ -46,13 +46,14 @@ public class SecurityConfig {
                                 "/api/patients"
                         ).permitAll()
 
-                        .requestMatchers("/api/appointments/**", "/api/appointments/upcoming")
+                        .requestMatchers("/api/appointments/**", "/api/appointments/upcoming","/api/appointments/cancel/**")
                         .hasAnyRole("RECEPTIONIST", "DOCTOR", "ADMIN")
 
-                        .requestMatchers("/api/doctor-logs/**").hasRole("DOCTOR")
+                        .requestMatchers("/api/doctor-logs/**","/api/surgeries/**","/api/appointments/cancel/**").hasAnyRole("DOCTOR","SURGERY")
                         .requestMatchers("/api/surgeries/**").hasAnyRole("SURGERY","DOCTOR")
                         .requestMatchers("/api/surgery-logs/**","/api/surgery-appointments/**").hasAnyRole("SURGERY", "DOCTOR", "RECEPTIONIST") // ✅ Add this line
-
+                        .requestMatchers("/api/medical-bills/**","api/patients")
+                        .hasAnyRole("BILLING","ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

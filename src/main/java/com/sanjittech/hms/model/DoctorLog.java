@@ -2,6 +2,9 @@ package com.sanjittech.hms.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +12,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -24,18 +28,27 @@ public class DoctorLog {
     private String reasonForVisit;
     @Column
     private String diagnosis;
-    @OneToMany(mappedBy = "doctorLog", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Medicine> medicines;
+    @OneToMany(mappedBy = "doctorLog", cascade = CascadeType.ALL)
+    @JsonManagedReference(value = "doctor-meds")
+    private List<MedicalBillEntry> medicineEntries = new ArrayList<>();
+
+
+
     @Column
     private boolean followUpRequired;
     @Column
     private LocalDate followUpDate;
     private String testType;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "patient_id")
-    @JsonBackReference
+    @JsonIgnoreProperties({"doctorLogs"})
     private Patient patient;
+
+
+
+
+
 
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -44,4 +57,6 @@ public class DoctorLog {
     @ManyToOne
     @JsonIgnore
     private Appointment appointment;
+
+
 }

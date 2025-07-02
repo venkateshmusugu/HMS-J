@@ -1,13 +1,7 @@
 package com.sanjittech.hms.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
+import lombok.*;
 
 @Entity
 @Data
@@ -18,19 +12,19 @@ public class Medicine {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "medicine_id")  // ✅ Match the DB column name
-    private Long medicineId;
+    private Long id;
 
-    private String dosage;
+    @Column(nullable = false)
     private String name;
-    private int durationInDays;
-    private String frequency;
 
-    @ManyToOne
-    @JsonIgnore
-    @JoinColumn(name = "doctor_log_id")
-    private DoctorLog doctorLog;
+    @Column(nullable = false)
+    private String dosage;
 
-    // ✅ getters/setters
+    @Column(nullable = false)
+    private Double amount;
+
+    @Override
+    public String toString() {
+        return name + " (" + dosage + ")";
+    }
 }
-

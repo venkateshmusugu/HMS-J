@@ -1,6 +1,7 @@
 package com.sanjittech.hms.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,9 +23,12 @@ public class Treatment {
     private String prescription;
     private String remarks;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "patient_id")
-    @JsonBackReference
+    @JsonIgnoreProperties({"treatments"})
     private Patient patient;
+
+
+
 }
 

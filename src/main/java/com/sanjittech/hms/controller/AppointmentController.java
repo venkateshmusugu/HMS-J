@@ -1,10 +1,13 @@
 package com.sanjittech.hms.controller;
 
+import com.sanjittech.hms.dto.AppointmentDTO;
 import com.sanjittech.hms.model.Appointment;
+import com.sanjittech.hms.model.AppointmentStatus;
 import com.sanjittech.hms.repository.AppointmentRepository;
 import com.sanjittech.hms.service.AppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +26,27 @@ public class AppointmentController {
     private AppointmentRepository appointmentRepository;
 
     @PostMapping
-    public ResponseEntity<Appointment> createAppointment(@RequestBody Appointment appointment) {
-        Appointment savedAppointment = appointmentService.saveAppointment(appointment);
-        return ResponseEntity.ok(savedAppointment);
+    public ResponseEntity<Appointment> createAppointment(@RequestBody AppointmentDTO dto) {
+        Appointment saved = appointmentService.saveAppointmentFromDTO(dto);
+        return ResponseEntity.ok(saved);
     }
+    @PostMapping("/book/{patientId}")
+    public ResponseEntity<?> bookAppointmentForPatient(
+            @PathVariable Long patientId,
+            @RequestBody AppointmentDTO dto
+    ) {
+        try {
+            Appointment appointment = appointmentService.bookAppointmentWithPatientId(patientId, dto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(appointment);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("❌ Failed to book appointment: " + e.getMessage());
+        }
+    }
+
+
+
+
+
 
     @GetMapping("/upcoming")
     public ResponseEntity<List<Appointment>> getAppointments(
@@ -72,6 +92,19 @@ public class AppointmentController {
         boolean available = appointmentService.isSlotAvailable(date, startTime, endTime, doctorId);
         return ResponseEntity.ok(available);
     }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
+        Appointment appt = appointmentService.getAppointmentById(id);
+        if (appt != null) {
+            appt.setStatus(AppointmentStatus.CANCELLED);  // Ensure this enum value exists
+            appointmentRepository.save(appt);             // ✅ Save directly without validation
+            return ResponseEntity.ok("Appointment cancelled successfully.");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Appointment not found.");
+        }
+    }
+
 
 
 

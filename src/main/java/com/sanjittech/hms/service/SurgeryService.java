@@ -1,12 +1,8 @@
 package com.sanjittech.hms.service;
 
 import com.sanjittech.hms.dto.SurgeryLogDto;
-import com.sanjittech.hms.model.Patient;
-import com.sanjittech.hms.model.Surgery;
-import com.sanjittech.hms.model.SurgeryAppointment;
-import com.sanjittech.hms.repository.PatientRepository;
-import com.sanjittech.hms.repository.SurgeryAppointmentRepository;
-import com.sanjittech.hms.repository.SurgeryRepository;
+import com.sanjittech.hms.model.*;
+import com.sanjittech.hms.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,6 +23,9 @@ public class SurgeryService {
     @Autowired
     private SurgeryAppointmentRepository appointmentRepo;
 
+    @Autowired
+    private MedicalBillEntryRepository medRepo;
+
     public void bookSurgery(Long patientId, SurgeryLogDto dto) {
         Patient patient = patientRepo.findById(patientId)
                 .orElseThrow(() -> new RuntimeException("Patient not found"));
@@ -34,7 +33,7 @@ public class SurgeryService {
         Surgery surgery = Surgery.builder()
                 .patient(patient)
                 .surgeryDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null)
-                .reason(dto.getReasonForSurgery())
+                .reasonForSurgery(dto.getReasonForSurgery())
                 .diagnosis(dto.getDiagnosis())
                 .build();
 
@@ -48,12 +47,11 @@ public class SurgeryService {
         Surgery surgery = Surgery.builder()
                 .patient(appointment.getPatient())
                 .surgeryDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null)
-                .reason(dto.getReasonForSurgery())
+                .reasonForSurgery(dto.getReasonForSurgery())
                 .diagnosis(dto.getDiagnosis())
                 .build();
 
         surgeryRepo.save(surgery);
-
         appointment.setSurgeryLog(surgery);
         appointmentRepo.save(appointment);
 
@@ -65,13 +63,14 @@ public class SurgeryService {
                 .orElseThrow(() -> new RuntimeException("Surgery not found"));
 
         surgery.setSurgeryDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null);
-        surgery.setReason(dto.getReasonForSurgery());
+        surgery.setReasonForSurgery(dto.getReasonForSurgery());
         surgery.setDiagnosis(dto.getDiagnosis());
 
         return surgeryRepo.save(surgery);
     }
 
     public void deleteSurgery(Long id) {
+        medRepo.deleteBySurgery_Id(id);  // Delete associated medication entries
         surgeryRepo.deleteById(id);
     }
 
@@ -92,7 +91,19 @@ public class SurgeryService {
         return appointmentRepo.findByPatientPatientId(patientId);
     }
 
+    public List<MedicalBillEntry> getMedicationsForSurgery(Long surgeryAppointmentId) {
+        return medRepo.findBySurgery_Id(surgeryAppointmentId);
+    }
 
+    public void saveMedicationsForSurgery(Long surgeryAppointmentId, List<MedicalBillEntry> entries) {
+        SurgeryAppointment appointment = appointmentRepo.findById(surgeryAppointmentId)
+                .orElseThrow(() -> new RuntimeException("Surgery appointment not found"));
 
+        for (MedicalBillEntry entry : entries) {
+            entry.setSurgery(appointment);
+            entry.setPurpose("SURGERY");
+        }
 
+        medRepo.saveAll(entries);
+    }
 }

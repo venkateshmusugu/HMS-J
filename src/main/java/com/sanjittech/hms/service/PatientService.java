@@ -5,6 +5,7 @@ import com.sanjittech.hms.repository.PatientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -18,8 +19,12 @@ public class PatientService {
     }
 
     public Patient savePatient(Patient patient) {
+        if (patient.getRegistrationDate() == null) {
+            patient.setRegistrationDate(LocalDate.now());
+        }
         return patientRepository.save(patient);
     }
+
 
     public Patient getPatientById(Long id) {
         return patientRepository.findById(id).orElse(null);
@@ -32,5 +37,13 @@ public class PatientService {
 
     public void deletePatient(Long id) {
         patientRepository.deleteById(id);
+    }
+
+    public List<Patient> getTodayRegisteredPatients() {
+        return patientRepository.findByRegistrationDate(LocalDate.now());
+    }
+
+    public List<Patient> searchPatientsByNameOrMobile(String query) {
+        return patientRepository.findByPatientNameContainingIgnoreCaseOrPhoneNumberContaining(query, query);
     }
 }

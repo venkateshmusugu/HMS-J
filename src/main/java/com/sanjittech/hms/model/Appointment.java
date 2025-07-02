@@ -2,6 +2,7 @@ package com.sanjittech.hms.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,15 +25,20 @@ public class Appointment {
     private String departmentId;
     @Column(name = "reason_for_visit")
     private String reasonForVisit;
+    @Enumerated(EnumType.STRING)
+    private AppointmentStatus status = AppointmentStatus.ACTIVE;
 
 
 
-    @ManyToOne(fetch = FetchType.EAGER) // ← Change this
-    @JoinColumn(name = "patient_id")
-    @JsonIgnoreProperties(value = { "appointments" }) // Optional but good for avoiding loops
-    private Patient patient;
 
     @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "patient_id")
+    @JsonIgnoreProperties({"appointments"})
+    private Patient patient;
+
+
+
+    @ManyToOne
     @JoinColumn(name = "doctor_id")
     @JsonIgnoreProperties(value = { "appointments" }) // If Doctor has appointments list too
     private Doctor doctor;

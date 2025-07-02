@@ -2,6 +2,7 @@ package com.sanjittech.hms.repository;
 
 import com.sanjittech.hms.model.Surgery;
 import com.sanjittech.hms.model.SurgeryAppointment;
+import io.micrometer.core.instrument.config.MeterFilter;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
@@ -12,6 +13,7 @@ public interface SurgeryRepository extends JpaRepository<Surgery, Long> {
 
     List<Surgery> findByPatient_PatientId(Long patientId);
     List<SurgeryAppointment> findByPatientPatientId(Long patientId);
+
 
 
 }

@@ -1,6 +1,7 @@
 package com.sanjittech.hms.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,10 +22,13 @@ public class PatientCase {
     private String detailedDescription;
     private String remark;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne
     @JoinColumn(name = "patient_id")
-    @JsonBackReference
+    @JsonIgnoreProperties({"patient"}) // Avoid back-reference recursion
     private Patient patient;
+
+
+
 }
 
 

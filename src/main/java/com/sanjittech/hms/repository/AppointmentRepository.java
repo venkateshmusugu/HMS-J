@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
@@ -69,7 +70,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByDateWithDoctorAndPatient(@Param("date") LocalDate date);
 
 
-
-
+    @Query("SELECT a FROM Appointment a WHERE a.doctor.doctorId = :doctorId AND a.visitDate = :date AND " +
+            "a.visitId <> :excludeId AND " +
+            "((:startTime BETWEEN a.startTime AND a.endTime) OR " +
+            "(:endTime BETWEEN a.startTime AND a.endTime) OR " +
+            "(a.startTime BETWEEN :startTime AND :endTime))")
+    List<Appointment> findOverlappingAppointmentsWithExclusion(
+            @Param("doctorId") Long doctorId,
+            @Param("date") LocalDate date,
+            @Param("startTime") LocalTime startTime,
+            @Param("endTime") LocalTime endTime,
+            @Param("excludeId") Long excludeId
+    );
 
 }

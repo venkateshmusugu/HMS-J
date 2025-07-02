@@ -1,16 +1,24 @@
 package com.sanjittech.hms.dto;
 
-import com.sanjittech.hms.model.Appointment;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class AppointmentDTO {
-    private Long visitId;
-    private String patientName;
-    private String doctorName;
+    private LocalDate visitDate;
+    private LocalTime startTime;
+    private LocalTime endTime;
+    private String departmentId;
+    private String reasonForVisit;
 
-    public AppointmentDTO(Appointment a) {
-        this.visitId = a.getVisitId();
-        this.patientName = a.getPatient() != null ? a.getPatient().getPatientName() : null;
-        this.doctorName = a.getDoctor() != null ? a.getDoctor().getDoctorName() : null;
-    }
+    private Long doctorId;
+    private Long patientId;
+
 
 }

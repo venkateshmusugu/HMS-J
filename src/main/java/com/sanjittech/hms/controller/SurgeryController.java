@@ -68,6 +68,13 @@ public class SurgeryController {
                 .toList();
         return ResponseEntity.ok(dtoList);
     }
+    @GetMapping("/latest-by-patient/{patientId}")
+    public ResponseEntity<SurgeryLogDto> getLatestSurgery(@PathVariable Long patientId) {
+        return surgeryAppointmentRepository.findTopByPatient_PatientIdOrderBySurgeryDateDesc(patientId)
+                .map(surgery -> ResponseEntity.ok(new SurgeryLogDto(surgery)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
 
 
 }

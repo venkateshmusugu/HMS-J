@@ -1,10 +1,14 @@
 package com.sanjittech.hms.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
@@ -12,21 +16,40 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class MedicalBill {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long billId;
 
-    private String medicineName;
-    private String dosage;
-    private int quantity;
-    private Double amount;
-    private Double totalAmount;
+    private LocalDate billDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "medicine_id")
+    @JsonIgnoreProperties("id")  // prevent recursion
+    private Medicine medicine;
+
 
     @ManyToOne
     @JoinColumn(name = "patient_id")
-    @com.fasterxml.jackson.annotation.JsonBackReference
+    @JsonIgnoreProperties({"bills"})
     private Patient patient;
 
-    @ManyToOne
-    private Medicine medicine;
+    @Column(name = "created_date")
+    private LocalDate createdDate;
+
+    @Column(name = "created_time")
+    private LocalTime createdTime;
+
+    @OneToMany(mappedBy = "medicalBill", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<MedicalBillEntry> entries = new ArrayList<>();
+
+    public Double getTotalAmount() {
+        return entries.stream().mapToDouble(MedicalBillEntry::getSubtotal).sum();
+    }
+
+    @Override
+    public String toString() {
+        return "MedicalBill{id=" + billId + ", billDate=" + billDate + ", entries=" + entries.size() + "}";
+    }
 }
