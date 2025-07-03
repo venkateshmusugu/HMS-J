@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/surgeries/**").hasAnyRole("SURGERY","DOCTOR")
                         .requestMatchers("/api/surgery-logs/**","/api/surgery-appointments/**").hasAnyRole("SURGERY", "DOCTOR", "RECEPTIONIST") // ✅ Add this line
                         .requestMatchers("/api/medical-bills/**","api/patients")
-                        .hasAnyRole("BILLING","ADMIN")
+                        .hasAnyRole("BILLING","ADMIN","DOCTOR","SURGERY")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -1,6 +1,7 @@
 package com.sanjittech.hms.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -40,24 +41,24 @@ public class MedicalBillEntry {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_log_id")
-    @JsonBackReference(value = "doctor-meds")
+    @JsonIgnore
     private DoctorLog doctorLog;
 
 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "surgery_id")
-    @JsonIgnoreProperties("medicineEntries")
+    @JsonIgnore
     private SurgeryAppointment surgery;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id")
-    @JsonIgnoreProperties("billEntries")
+    @JsonIgnoreProperties({"bills", "doctorLogs"})
     private Patient patient;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "bill_id")
-    @JsonIgnoreProperties("entries")
+    @JsonIgnore  // prevent recursion during serialization
     private MedicalBill medicalBill;
 
     public Double getSubtotal() {
@@ -72,4 +73,6 @@ public class MedicalBillEntry {
                 ", amount=" + amount +
                 ", issuedQty=" + issuedQuantity + "}";
     }
+
+
 }

@@ -23,15 +23,12 @@ public class MedicalBill {
 
     private LocalDate billDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "medicine_id")
-    @JsonIgnoreProperties("id")  // prevent recursion
-    private Medicine medicine;
+
 
 
     @ManyToOne
     @JoinColumn(name = "patient_id")
-    @JsonIgnoreProperties({"bills"})
+    @JsonIgnoreProperties({"bills", "doctorLogs"})
     private Patient patient;
 
     @Column(name = "created_date")
@@ -41,7 +38,6 @@ public class MedicalBill {
     private LocalTime createdTime;
 
     @OneToMany(mappedBy = "medicalBill", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
     private List<MedicalBillEntry> entries = new ArrayList<>();
 
     public Double getTotalAmount() {

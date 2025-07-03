@@ -30,7 +30,7 @@ public class Patient {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dob;
     private String maritalStatus;
-    private String caseDescription;
+    private String address;
 
     @OneToOne(mappedBy = "patient", cascade = CascadeType.ALL)
     @JsonIgnoreProperties({"patient"})
@@ -41,7 +41,7 @@ public class Patient {
     private List<DoctorLog> doctorLogs;
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties({"patient"})
+    @JsonIgnore
     private List<MedicalBill> bills;
 
 

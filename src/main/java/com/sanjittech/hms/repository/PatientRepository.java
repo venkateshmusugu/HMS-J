@@ -11,4 +11,5 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     List<Patient> findByRegistrationDate(LocalDate date);
     List<Patient> findByPatientNameContainingIgnoreCaseOrPhoneNumberContaining(String name, String phone);
 
+    Patient findByPhoneNumber(String phone);
 }

@@ -1,6 +1,7 @@
 package com.sanjittech.hms.controller;
 
 import com.sanjittech.hms.dto.PatientDTO;
+import com.sanjittech.hms.dto.PatientSuggestionDTO;
 import com.sanjittech.hms.model.Patient;
 import com.sanjittech.hms.service.PatientService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,7 @@ public class PatientController {
                 .age(dto.getAge())
                 .dob(dto.getDob())
                 .maritalStatus(dto.getMaritalStatus())
-                .caseDescription(dto.getCaseDescription())
+                .address(dto.getCaseDescription())
                 .registrationDate(LocalDate.now())
                 .build();
 
@@ -54,9 +55,14 @@ public class PatientController {
     }
 
     @GetMapping("/patients/search")
-    public ResponseEntity<List<Patient>> searchPatients(@RequestParam String query) {
+    public ResponseEntity<List<PatientSuggestionDTO>> searchPatients(@RequestParam String query) {
         List<Patient> matched = patientService.searchPatientsByNameOrMobile(query);
-        return ResponseEntity.ok(matched);
+
+        List<PatientSuggestionDTO> suggestions = matched.stream()
+                .map(p -> new PatientSuggestionDTO(p.getPatientId(), p.getPatientName(), p.getPhoneNumber()))
+                .toList();
+
+        return ResponseEntity.ok(suggestions);
     }
 
 }

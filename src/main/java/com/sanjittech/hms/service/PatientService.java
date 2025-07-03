@@ -46,4 +46,5 @@ public class PatientService {
     public List<Patient> searchPatientsByNameOrMobile(String query) {
         return patientRepository.findByPatientNameContainingIgnoreCaseOrPhoneNumberContaining(query, query);
     }
+
 }

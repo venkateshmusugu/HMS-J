@@ -29,7 +29,7 @@ public class DoctorLog {
     @Column
     private String diagnosis;
     @OneToMany(mappedBy = "doctorLog", cascade = CascadeType.ALL)
-    @JsonManagedReference(value = "doctor-meds")
+
     private List<MedicalBillEntry> medicineEntries = new ArrayList<>();
 
 

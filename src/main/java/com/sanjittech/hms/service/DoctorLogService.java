@@ -68,7 +68,7 @@ public class DoctorLogService {
                         dto.setName(entry.getMedicineName());
                         dto.setDosage(entry.getDosage());
                         dto.setFrequency(entry.getFrequency());
-                        dto.setDurationInDays(entry.getDurationInDays() != null ? entry.getDurationInDays() : 0);
+
                         return dto;
                     }).collect(Collectors.toList());
 
