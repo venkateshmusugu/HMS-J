@@ -21,6 +21,9 @@ public class SurgeryService {
     private PatientRepository patientRepo;
 
     @Autowired
+    private MedicineRepository medicineRepo;
+
+    @Autowired
     private SurgeryAppointmentRepository appointmentRepo;
 
     @Autowired
@@ -100,10 +103,29 @@ public class SurgeryService {
                 .orElseThrow(() -> new RuntimeException("Surgery appointment not found"));
 
         for (MedicalBillEntry entry : entries) {
+            if (entry.getMedicine() == null || entry.getMedicine().getId() == null || entry.getMedicine().getId() == 0) {
+                throw new IllegalArgumentException("Invalid medicine: ID is missing or zero");
+            }
+
+            Medicine medicine = medicineRepo.findById(entry.getMedicine().getId())
+                    .orElseThrow(() -> new RuntimeException("Medicine not found with ID: " + entry.getMedicine().getId()));
+
+            entry.setMedicine(medicine);
             entry.setSurgery(appointment);
+            entry.setPatient(appointment.getPatient()); // ✅ set patient
             entry.setPurpose("SURGERY");
+
+            // ✅ Ensure quantity is set
+            if (entry.getQuantity() == null || entry.getQuantity() <= 0)
+                entry.setQuantity(1);
+
+            if (entry.getIssuedQuantity() == null || entry.getIssuedQuantity() <= 0)
+                entry.setIssuedQuantity(1);
+
+            entry.setSubtotal(medicine.getAmount() * entry.getIssuedQuantity());
         }
 
         medRepo.saveAll(entries);
     }
+
 }

@@ -1,6 +1,5 @@
 package com.sanjittech.hms.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -20,12 +19,11 @@ public class MedicalBillEntry {
     private Long entryId;
 
     private String purpose;
-    private String medicineName;
-    private String dosage;
+
+
     private String frequency;
     private Integer durationInDays;
 
-    private Double amount;
 
     @Column(nullable = false)
     private Integer quantity = 1;
@@ -36,7 +34,19 @@ public class MedicalBillEntry {
     private String diagnosis;
     private String reason;
     private LocalDate date;
+    @Transient
+    private String medicineName;
 
+    @Transient
+    private String dosage;
+
+    @Transient
+    private Double amount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "medicine_id", nullable = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Medicine medicine;
 
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -44,35 +54,34 @@ public class MedicalBillEntry {
     @JsonIgnore
     private DoctorLog doctorLog;
 
-
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "surgery_id")
     @JsonIgnore
     private SurgeryAppointment surgery;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_id")
+    @JoinColumn(name = "patient_id", nullable = false)
     @JsonIgnoreProperties({"bills", "doctorLogs"})
     private Patient patient;
 
-    @ManyToOne
-    @JoinColumn(name = "bill_id")
-    @JsonIgnore  // prevent recursion during serialization
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bill_id", nullable = false)
+    @JsonIgnore
     private MedicalBill medicalBill;
+    @Column
+    private Double subtotal;
+
 
     public Double getSubtotal() {
-        return (amount != null && issuedQuantity != null) ? amount * issuedQuantity : 0.0;
+        return (medicine.getAmount() != null && issuedQuantity != null) ? medicine.getAmount() * issuedQuantity : 0.0;
     }
 
     @Override
     public String toString() {
-        return "MedicalBillEntry{id=" + entryId +
-                ", purpose=" + purpose +
-                ", medicineName=" + medicineName +
-                ", amount=" + amount +
-                ", issuedQty=" + issuedQuantity + "}";
+        return "MedicalBillEntry{" +
+                "entryId=" + entryId +
+                ", medicine=" + (medicine != null ? medicine.getName() + " " + medicine.getDosage() : "null") +
+                ", issuedQty=" + issuedQuantity +
+                '}';
     }
-
-
 }

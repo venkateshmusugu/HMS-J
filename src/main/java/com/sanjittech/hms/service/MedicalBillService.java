@@ -6,8 +6,10 @@ import com.sanjittech.hms.model.MedicalBill;
 import com.sanjittech.hms.model.MedicalBillEntry;
 import com.sanjittech.hms.model.Medicine;
 import com.sanjittech.hms.model.Patient;
+import com.sanjittech.hms.repository.MedicalBillEntryRepository;
 import com.sanjittech.hms.repository.MedicalBillRepository;
 import com.sanjittech.hms.repository.MedicineRepository;
+import com.sanjittech.hms.repository.PatientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,127 +22,170 @@ import java.util.stream.Collectors;
 public class MedicalBillService {
 
     @Autowired
-    private MedicalBillRepository repository;
+    private MedicalBillRepository billRepo;
+
+    @Autowired
+    private MedicalBillEntryRepository entryRepo;
+
+
+
+    @Autowired
+    private PatientRepository patientRepo;
 
     @Autowired
     private MedicineRepository medicineRepo;
 
     public MedicalBill saveBill(MedicalBill bill) {
-        if (bill.getBillDate() == null) {
-            bill.setBillDate(LocalDate.now());
-        }
-        if (bill.getCreatedDate() == null) {
-            bill.setCreatedDate(LocalDate.now());
-        }
-        if (bill.getCreatedTime() == null) {
-            bill.setCreatedTime(LocalTime.now());
-        }
+        if (bill.getBillDate() == null) bill.setBillDate(LocalDate.now());
+        if (bill.getCreatedDate() == null) bill.setCreatedDate(LocalDate.now());
+        if (bill.getCreatedTime() == null) bill.setCreatedTime(LocalTime.now());
 
         if (bill.getEntries() != null && !bill.getEntries().isEmpty()) {
+            Set<String> uniqueMedKeys = new HashSet<>();
+
             for (MedicalBillEntry entry : bill.getEntries()) {
                 entry.setMedicalBill(bill);
                 entry.setPatient(bill.getPatient());
 
-                if (entry.getQuantity() == null || entry.getQuantity() <= 0) {
+                if (entry.getQuantity() == null || entry.getQuantity() <= 0)
                     entry.setQuantity(1);
-                }
-                if (entry.getIssuedQuantity() == null || entry.getIssuedQuantity() <= 0) {
+
+                if (entry.getIssuedQuantity() == null || entry.getIssuedQuantity() <= 0)
                     entry.setIssuedQuantity(1);
+
+                Medicine medicine = entry.getMedicine();
+                if (medicine == null) {
+                    throw new RuntimeException("Medicine is missing in bill entry");
                 }
 
-                // Set amount if not given
-                if (entry.getAmount() == null && entry.getIssuedQuantity() != null && entry.getIssuedQuantity() > 0) {
-                    entry.setAmount(entry.getSubtotal() / entry.getIssuedQuantity());
+                String name = medicine.getName() != null ? medicine.getName().trim() : null;
+                String dosage = medicine.getDosage() != null ? medicine.getDosage().trim() : null;
+                Double amount = medicine.getAmount();
+
+                if (name == null || dosage == null || amount == null) {
+                    throw new RuntimeException("Medicine is incomplete: " + medicine);
                 }
 
-                // ✅ Save medicine from this entry
-                trySaveMedicine(entry);
-
-                // ✅ Also save from doctorLog.medicineEntries if any
-                if (entry.getDoctorLog() != null && entry.getDoctorLog().getMedicineEntries() != null) {
-                    for (MedicalBillEntry dEntry : entry.getDoctorLog().getMedicineEntries()) {
-                        trySaveMedicine(dEntry);
-                    }
+                String medKey = (name + "|" + dosage).toLowerCase();
+                if (!uniqueMedKeys.add(medKey)) {
+                    throw new RuntimeException("Duplicate medicine entry: " + name + " " + dosage);
                 }
 
-                // ✅ Also save from surgery.medicineEntries if any
-                if (entry.getSurgery() != null && entry.getSurgery().getMedicineEntries() != null) {
-                    for (MedicalBillEntry sEntry : entry.getSurgery().getMedicineEntries()) {
-                        trySaveMedicine(sEntry);
+                Optional<Medicine> existing = medicineRepo.findByNameIgnoreCaseAndDosageIgnoreCase(name, dosage);
+
+                Medicine medToUse = existing.orElseGet(() -> {
+                    medicine.setName(name);
+                    medicine.setDosage(dosage);
+                    return medicineRepo.save(medicine);
+                });
+
+                entry.setMedicine(medToUse);
+                entry.setSubtotal(medToUse.getAmount() * entry.getIssuedQuantity());
+
+                // ✅ Set transient fields
+                entry.setMedicineName(medToUse.getName());
+                entry.setDosage(medToUse.getDosage());
+                entry.setAmount(medToUse.getAmount());
+            }
+        }
+
+        return billRepo.save(bill);
+    }
+
+
+
+    public void trySaveMedicine(Medicine medicine) {
+        if (medicine == null) return;
+
+        String name = medicine.getName();
+        String dosage = medicine.getDosage();
+        Double amount = medicine.getAmount();
+
+        if (name == null || dosage == null || name.trim().isEmpty() || dosage.trim().isEmpty()) return;
+
+        boolean exists = medicineRepo.findByNameIgnoreCaseAndDosageIgnoreCase(name.trim(), dosage.trim()).isPresent();
+        if (!exists) {
+            medicineRepo.save(medicine);
+            System.out.println("✅ New medicine saved: " + name + " (" + dosage + ")");
+        }
+    }
+
+    public List<MedicalBill> getBillsByMobile(String mobile) {
+        List<MedicalBill> bills = billRepo.findByPatientMobile(mobile);
+
+        for (MedicalBill bill : bills) {
+            if (bill.getEntries() != null) {
+                for (MedicalBillEntry entry : bill.getEntries()) {
+                    Medicine med = entry.getMedicine();
+                    if (med != null) {
+                        entry.setMedicineName(med.getName());
+                        entry.setDosage(med.getDosage());
+                        entry.setAmount(med.getAmount());
+                        if (entry.getSubtotal() == null) {
+                            entry.setSubtotal(med.getAmount() * entry.getIssuedQuantity());
+                        }
                     }
                 }
             }
         }
 
-        return repository.save(bill);
+        return bills;
     }
 
-    public void trySaveMedicine(MedicalBillEntry entry) {
-        if (entry == null || entry.getMedicineName() == null || entry.getDosage() == null) return;
 
-        String medicineName = entry.getMedicineName().trim();
-        String dosage = entry.getDosage().trim();
-        Double amount = entry.getAmount();
+    public List<MedicalBill> getBillsByDate(LocalDate date) {
+        List<MedicalBill> bills = billRepo.findByBillDate(date);
 
-        if (medicineName.isEmpty() || dosage.isEmpty()) return;
-
-        boolean exists = medicineRepo.findByNameIgnoreCaseAndDosageIgnoreCase(medicineName, dosage).isPresent();
-        if (!exists) {
-            Medicine newMed = Medicine.builder()
-                    .name(medicineName)
-                    .dosage(dosage)
-                    .amount(amount)
-                    .build();
-            medicineRepo.save(newMed);
-            System.out.println("✅ Medicine saved: " + medicineName + " - " + dosage);
+        for (MedicalBill bill : bills) {
+            for (MedicalBillEntry entry : bill.getEntries()) {
+                Medicine med = entry.getMedicine();
+                if (med != null) {
+                    entry.setMedicineName(med.getName());
+                    entry.setDosage(med.getDosage());
+                    entry.setAmount(med.getAmount());
+                    if (entry.getSubtotal() == null) {
+                        entry.setSubtotal(med.getAmount() * entry.getIssuedQuantity());
+                    }
+                }
+            }
         }
+
+        return bills;
     }
 
 
-
-
-
-    public List<MedicalBill> getBillsByMobile(String mobile) {
-        return repository.findByPatientMobile(mobile);
+    public Optional<MedicalBill> getBillById(Long id) {
+        return billRepo.findById(id);
     }
 
-    public List<MedicalBill> getBillsByDate(LocalDate billDate) {
-        return repository.findByBillDate(billDate);
-    }
-
-    public Optional<MedicalBill> getBillById(Long billId) {
-        return repository.findById(billId);
-    }
-
-    public void deleteBillById(Long billId) {
-        repository.deleteById(billId);
+    public void deleteBillById(Long id) {
+        billRepo.deleteById(id);
     }
 
     public List<PatientSummaryDTO> getPatientSummaries() {
-        List<MedicalBill> bills = repository.findAll();
+        List<MedicalBill> bills = billRepo.findAll();
         Map<String, PatientSummaryDTO> summaryMap = new HashMap<>();
 
         for (MedicalBill bill : bills) {
             Patient patient = bill.getPatient();
-            if (patient == null) {
-                System.err.println("⚠️ Skipping bill with null patient: Bill ID = " + bill.getBillId());
-                continue;
-            }
+            if (patient == null) continue;
 
             String phone = patient.getPhoneNumber();
-            if (!summaryMap.containsKey(phone)) {
-                PatientSummaryDTO dto = new PatientSummaryDTO();
-                dto.setName(patient.getPatientName());
-                dto.setMobile(phone);
-                dto.setDate(bill.getCreatedDate() != null ? bill.getCreatedDate().toString() : "--");
-                dto.setTime(bill.getCreatedTime() != null ? bill.getCreatedTime().toString().substring(0, 5) : "--");
-                dto.setBillId(bill.getBillId());
-                dto.setBillCount(1);
-                summaryMap.put(phone, dto);
-            } else {
-                PatientSummaryDTO existing = summaryMap.get(phone);
-                existing.setBillCount(existing.getBillCount() + 1);
-            }
+            summaryMap.compute(phone, (k, v) -> {
+                if (v == null) {
+                    return PatientSummaryDTO.builder()
+                            .name(patient.getPatientName())
+                            .mobile(phone)
+                            .billId(bill.getBillId())
+                            .billCount(1)
+                            .date(bill.getCreatedDate() + "")
+                            .time(bill.getCreatedTime() + "")
+                            .build();
+                } else {
+                    v.setBillCount(v.getBillCount() + 1);
+                    return v;
+                }
+            });
         }
 
         return new ArrayList<>(summaryMap.values());
@@ -153,7 +198,43 @@ public class MedicalBillService {
                         med.getName(),
                         med.getDosage(),
                         med.getAmount()
-                ))
-                .collect(Collectors.toList());
+                )).collect(Collectors.toList());
     }
+
+    public MedicalBill createBillFromEntryIds(Long patientId, List<Long> entryIds) {
+        Patient patient = patientRepo.findById(patientId)
+                .orElseThrow(() -> new RuntimeException("Patient not found"));
+
+        // ✅ FIX: Get entries from MedicalBillEntryRepository, not billRepo
+        // ✅ CORRECT: Fetching from MedicalBillEntryRepository (entryRepo)
+        List<MedicalBillEntry> entries = entryRepo.findAllById(entryIds);
+
+
+
+        // Validate all entries
+        for (MedicalBillEntry entry : entries) {
+            if (entry.getMedicalBill() != null) {
+                throw new RuntimeException("Entry already billed: ID " + entry.getEntryId());
+            }
+
+            entry.setPatient(patient); // optional if not already set
+        }
+
+        MedicalBill bill = new MedicalBill();
+        bill.setPatient(patient);
+        bill.setBillDate(LocalDate.now());
+        bill.setCreatedDate(LocalDate.now());
+        bill.setCreatedTime(LocalTime.now());
+        bill.setEntries(entries);
+
+        for (MedicalBillEntry entry : entries) {
+            entry.setMedicalBill(bill);
+            entry.setSubtotal(entry.getMedicine().getAmount() * entry.getIssuedQuantity());
+        }
+
+        return billRepo.save(bill);
+    }
+
+
+
 }

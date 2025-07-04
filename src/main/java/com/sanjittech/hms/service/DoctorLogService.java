@@ -3,10 +3,7 @@ package com.sanjittech.hms.service;
 import com.sanjittech.hms.dto.DoctorLogDTO;
 import com.sanjittech.hms.dto.MedicalBillEntryDTO;
 import com.sanjittech.hms.dto.MedicineDTO;
-import com.sanjittech.hms.model.Appointment;
-import com.sanjittech.hms.model.DoctorLog;
-import com.sanjittech.hms.model.MedicalBillEntry;
-import com.sanjittech.hms.model.Medicine;
+import com.sanjittech.hms.model.*;
 import com.sanjittech.hms.repository.AppointmentRepository;
 import com.sanjittech.hms.repository.DoctorLogRepo;
 import com.sanjittech.hms.repository.MedicalBillEntryRepository;
@@ -25,6 +22,10 @@ public class DoctorLogService {
     private DoctorLogRepo repo;
     @Autowired
     private MedicineRepository medicineRepository;
+
+    @Autowired
+    private MedicalBillService medicalBillService;
+
 
 
     @Autowired
@@ -65,8 +66,9 @@ public class DoctorLogService {
 
                     List<MedicineDTO> dtos = entries.stream().map(entry -> {
                         MedicineDTO dto = new MedicineDTO();
-                        dto.setName(entry.getMedicineName());
-                        dto.setDosage(entry.getDosage());
+                        dto.setName(entry.getMedicine().getName());
+                        dto.setDosage(entry.getMedicine().getDosage());
+
                         dto.setFrequency(entry.getFrequency());
 
                         return dto;
@@ -117,43 +119,46 @@ public class DoctorLogService {
         log.setFollowUpRequired(dto.isFollowUpRequired());
         log.setTestType(dto.getTestType());
 
+        // 🔁 Save the DoctorLog FIRST to get the ID
+        DoctorLog savedLog = repo.save(log);
+
         List<MedicalBillEntry> entries = new ArrayList<>();
         if (dto.getMedicines() != null) {
             for (MedicalBillEntryDTO m : dto.getMedicines()) {
                 MedicalBillEntry entry = new MedicalBillEntry();
-                entry.setDoctorLog(log);
+                entry.setDoctorLog(savedLog); // 🔁 attach the saved instance
                 entry.setPurpose("DOCTOR");
-                entry.setMedicineName(m.getMedicineName());
-                entry.setDosage(m.getDosage());
                 entry.setDurationInDays(m.getDurationInDays());
                 entry.setFrequency(m.getFrequency());
                 entry.setIssuedQuantity(1);
                 entry.setQuantity(1);
+                entry.setPatient(savedLog.getPatient()); // ✅ recommended
 
-                // ✅ Auto-fill amount if exists
-                medicineRepository.findByNameIgnoreCaseAndDosageIgnoreCase(
-                        m.getMedicineName(), m.getDosage()
-                ).ifPresentOrElse(
-                        med -> entry.setAmount(med.getAmount()),
-                        () -> {
-                            entry.setAmount(0.0);
-                            // Optional: Add to master list if new
+                // Find or create the Medicine
+                Medicine med = medicineRepository
+                        .findByNameIgnoreCaseAndDosageIgnoreCase(m.getMedicineName(), m.getDosage())
+                        .orElseGet(() -> {
                             Medicine newMed = Medicine.builder()
                                     .name(m.getMedicineName())
                                     .dosage(m.getDosage())
                                     .amount(0.0)
                                     .build();
-                            medicineRepository.save(newMed);
-                        }
-                );
+                            return medicineRepository.save(newMed);
+                        });
 
+                entry.setMedicine(med);
+                entry.setSubtotal(med.getAmount() * entry.getIssuedQuantity()); // optional if subtotal is used
                 entries.add(entry);
             }
+
+            // ✅ Save entries *after* log
+            medicalBillEntryRepo.saveAll(entries);
         }
 
-        // ✅ This was missing in your code
-        log.setMedicineEntries(entries);
-
-        return repo.save(log);
+        return savedLog;
     }
+
+
+
+
 }

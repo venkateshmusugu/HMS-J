@@ -1,7 +1,11 @@
     package com.sanjittech.hms.model;
 
+    import com.fasterxml.jackson.annotation.JsonIgnore;
     import jakarta.persistence.*;
     import lombok.*;
+
+    import java.util.ArrayList;
+    import java.util.List;
 
     @Entity
     @Data
@@ -22,6 +26,10 @@
 
         @Column(nullable = false)
         private Double amount;
+
+        @OneToMany(mappedBy = "medicine", cascade = CascadeType.ALL)
+        @JsonIgnore
+        private List<MedicalBillEntry> billEntries = new ArrayList<>();
 
         @Override
         public String toString() {
