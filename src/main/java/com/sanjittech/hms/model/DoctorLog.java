@@ -28,8 +28,9 @@ public class DoctorLog {
     private String reasonForVisit;
     @Column
     private String diagnosis;
-    @OneToMany(mappedBy = "doctorLog", cascade = CascadeType.ALL)
 
+    @OneToMany(mappedBy = "doctorLog", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<MedicalBillEntry> medicineEntries = new ArrayList<>();
 
 

@@ -4,10 +4,7 @@ import com.sanjittech.hms.dto.DoctorLogDTO;
 import com.sanjittech.hms.dto.MedicalBillEntryDTO;
 import com.sanjittech.hms.dto.MedicineDTO;
 import com.sanjittech.hms.model.*;
-import com.sanjittech.hms.repository.AppointmentRepository;
-import com.sanjittech.hms.repository.DoctorLogRepo;
-import com.sanjittech.hms.repository.MedicalBillEntryRepository;
-import com.sanjittech.hms.repository.MedicineRepository;
+import com.sanjittech.hms.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +22,9 @@ public class DoctorLogService {
 
     @Autowired
     private MedicalBillService medicalBillService;
+
+    @Autowired
+    private MedicalBillRepository medicalBillRepository;
 
 
 
@@ -52,7 +52,7 @@ public class DoctorLogService {
                     map.put("date", date != null ? date : LocalDate.now());
 
                     // Diagnosis fallback
-                    map.put("diagnosis", dl.getDiagnosis() != null ? dl.getDiagnosis() : "N/A");
+                    map.put("diagnosis", dl.getDiagnosis() != null ? dl.getDiagnosis() : "");
 
                     // Reason fallback
                     String reason = dl.getReasonForVisit();
@@ -64,17 +64,19 @@ public class DoctorLogService {
                     // Medications via updated embedded fields in MedicalBillEntry
                     List<MedicalBillEntry> entries = medicalBillEntryRepo.findByDoctorLog_Id(dl.getId());
 
-                    List<MedicineDTO> dtos = entries.stream().map(entry -> {
-                        MedicineDTO dto = new MedicineDTO();
-                        dto.setName(entry.getMedicine().getName());
-                        dto.setDosage(entry.getMedicine().getDosage());
-
-                        dto.setFrequency(entry.getFrequency());
-
-                        return dto;
+                    List<Map<String, Object>> medicines = entries.stream().map(entry -> {
+                        Map<String, Object> medMap = new HashMap<>();
+                        medMap.put("medicineName", entry.getMedicine().getName());
+                        medMap.put("dosage", entry.getMedicine().getDosage());
+                        medMap.put("durationInDays", entry.getDurationInDays());
+                        medMap.put("frequency", entry.getFrequency());
+                        return medMap;
                     }).collect(Collectors.toList());
 
-                    map.put("medicines", dtos);
+                    map.put("medicines", medicines);
+                    System.out.println("🧾 Prescription for: " + date);
+                    System.out.println(medicines);
+
                     return map;
                 })
                 .sorted(Comparator.comparing(m -> (LocalDate) m.get("date")))
@@ -119,22 +121,35 @@ public class DoctorLogService {
         log.setFollowUpRequired(dto.isFollowUpRequired());
         log.setTestType(dto.getTestType());
 
-        // 🔁 Save the DoctorLog FIRST to get the ID
         DoctorLog savedLog = repo.save(log);
 
         List<MedicalBillEntry> entries = new ArrayList<>();
+
         if (dto.getMedicines() != null) {
+
+            // ✅ Ensure OPEN bill exists or create one
+            MedicalBill bill = medicalBillRepository
+                    .findByPatientAndStatus(savedLog.getPatient(), "OPEN")
+                    .orElseGet(() -> {
+                        MedicalBill newBill = new MedicalBill();
+                        newBill.setPatient(savedLog.getPatient());
+                        newBill.setBillDate(LocalDate.now());
+                        newBill.setStatus("OPEN");
+                        return medicalBillRepository.save(newBill);
+                    });
+
             for (MedicalBillEntryDTO m : dto.getMedicines()) {
                 MedicalBillEntry entry = new MedicalBillEntry();
-                entry.setDoctorLog(savedLog); // 🔁 attach the saved instance
+                entry.setDoctorLog(savedLog);
                 entry.setPurpose("DOCTOR");
                 entry.setDurationInDays(m.getDurationInDays());
                 entry.setFrequency(m.getFrequency());
                 entry.setIssuedQuantity(1);
                 entry.setQuantity(1);
-                entry.setPatient(savedLog.getPatient()); // ✅ recommended
+                entry.setPatient(savedLog.getPatient());
+                entry.setMedicalBill(bill);
 
-                // Find or create the Medicine
+                // 🧾 Find or create medicine
                 Medicine med = medicineRepository
                         .findByNameIgnoreCaseAndDosageIgnoreCase(m.getMedicineName(), m.getDosage())
                         .orElseGet(() -> {
@@ -147,15 +162,15 @@ public class DoctorLogService {
                         });
 
                 entry.setMedicine(med);
-                entry.setSubtotal(med.getAmount() * entry.getIssuedQuantity()); // optional if subtotal is used
+                entry.setSubtotal(med.getAmount() * entry.getIssuedQuantity());
                 entries.add(entry);
             }
 
-            // ✅ Save entries *after* log
+            // 💾 Save all medicine entries
             medicalBillEntryRepo.saveAll(entries);
         }
 
-        return savedLog;
+        return savedLog; // ✅ Make sure to return the saved log
     }
 
 

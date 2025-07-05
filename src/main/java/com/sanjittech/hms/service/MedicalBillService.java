@@ -236,5 +236,15 @@ public class MedicalBillService {
     }
 
 
+    public MedicalBill getOrCreateOpenBillForPatient(Patient patient) {
+        return billRepo.findByPatientAndStatus(patient, "OPEN")
+                .orElseGet(() -> {
+                    MedicalBill newBill = new MedicalBill();
+                    newBill.setPatient(patient);
+                    newBill.setStatus("OPEN");
+                    newBill.setCreatedDate(LocalDate.now());
+                    return billRepo.save(newBill);
+                });
+    }
 
 }

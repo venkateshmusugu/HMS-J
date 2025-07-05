@@ -11,6 +11,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AppointmentDTO {
+    private Long visitId;
     private LocalDate visitDate;
     private LocalTime startTime;
     private LocalTime endTime;
@@ -18,7 +19,9 @@ public class AppointmentDTO {
     private String reasonForVisit;
 
     private Long doctorId;
+    private String doctorName;     // ✅ add
     private Long patientId;
+    private String patientName;
 
 
 }

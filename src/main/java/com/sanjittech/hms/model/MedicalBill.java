@@ -18,8 +18,9 @@ public class MedicalBill {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JoinColumn(name = "bill_id", nullable = true)
     private Long billId;
-
+    private String status;
     private LocalDate billDate;
 
     @Column(name = "created_date")

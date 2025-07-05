@@ -43,13 +43,8 @@ public class AppointmentController {
         }
     }
 
-
-
-
-
-
     @GetMapping("/upcoming")
-    public ResponseEntity<List<Appointment>> getAppointments(
+    public ResponseEntity<List<AppointmentDTO>> getAppointments(
             @RequestParam(required = false) String searchTerm,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
@@ -64,11 +59,34 @@ public class AppointmentController {
         } else {
             appointments = appointmentService.getAllSortedByDate();
         }
-        System.out.println("🔍 Logged-in user: " + SecurityContextHolder.getContext().getAuthentication().getName());
-        System.out.println("👨‍⚕️ Returning " + appointments.size() + " appointments");
 
-        return ResponseEntity.ok(appointments);
+        // Convert to DTOs
+        List<AppointmentDTO> dtoList = appointments.stream().map(appt -> {
+            AppointmentDTO dto = new AppointmentDTO();
+            dto.setVisitId(appt.getVisitId());
+            dto.setVisitDate(appt.getVisitDate());
+            dto.setStartTime(appt.getStartTime());
+            dto.setEndTime(appt.getEndTime());
+            dto.setReasonForVisit(appt.getReasonForVisit());
+
+            dto.setPatientId(appt.getPatient() != null ? appt.getPatient().getPatientId() : null);
+            dto.setPatientName(appt.getPatient() != null ? appt.getPatient().getPatientName() : null);
+
+            dto.setDoctorId(appt.getDoctor() != null ? appt.getDoctor().getDoctorId() : null);
+            dto.setDoctorName(appt.getDoctor() != null ? appt.getDoctor().getDoctorName() : null);
+
+            dto.setDepartmentId(
+                    (appt.getDoctor() != null && appt.getDoctor().getDepartment() != null)
+                            ? String.valueOf(appt.getDoctor().getDepartment().getDepartmentId())
+                            : null
+            );
+
+            return dto;
+        }).toList();
+
+        return ResponseEntity.ok(dtoList);
     }
+
 
 
     @PutMapping("/{id}")
