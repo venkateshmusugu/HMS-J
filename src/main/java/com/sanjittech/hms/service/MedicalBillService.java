@@ -134,7 +134,9 @@ public class MedicalBillService {
 
 
     public List<MedicalBill> getBillsByDate(LocalDate date) {
-        List<MedicalBill> bills = billRepo.findByBillDate(date);
+        System.out.println("🔍 Looking for bills on: " + date);
+        List<MedicalBill> bills = Optional.ofNullable(billRepo.findByBillDate(date)).orElse(Collections.emptyList());
+        System.out.println("✅ Found " + bills.size() + " bills for date " + date);
 
         for (MedicalBill bill : bills) {
             for (MedicalBillEntry entry : bill.getEntries()) {
@@ -152,6 +154,7 @@ public class MedicalBillService {
 
         return bills;
     }
+
 
 
     public Optional<MedicalBill> getBillById(Long id) {

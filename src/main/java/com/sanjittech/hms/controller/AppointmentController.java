@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,12 +47,20 @@ public class AppointmentController {
     @GetMapping("/upcoming")
     public ResponseEntity<List<AppointmentDTO>> getAppointments(
             @RequestParam(required = false) String searchTerm,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Long doctorId  // ✅ Add this line
     ) {
+        System.out.println("🩺 doctorId received in controller: " + doctorId);
         List<Appointment> appointments;
 
-        if (searchTerm != null && !searchTerm.isEmpty() && date != null) {
+        if (doctorId != null && date != null && searchTerm != null && !searchTerm.isEmpty()) {
+            appointments = appointmentService.findByDoctorDateAndSearch(doctorId, date, searchTerm);
+        } else if (doctorId != null && date != null) {
+            appointments = appointmentService.findByDoctorAndDate(doctorId, date);
+        } else if (date != null && searchTerm != null && !searchTerm.isEmpty()) {
             appointments = appointmentService.findByDateAndPatientNameOrMobile(date, searchTerm);
+        } else if (doctorId != null) {
+            appointments = appointmentService.findByDoctor(doctorId);
         } else if (searchTerm != null && !searchTerm.isEmpty()) {
             appointments = appointmentService.findByPatientNameOrMobile(searchTerm);
         } else if (date != null) {
@@ -60,7 +69,6 @@ public class AppointmentController {
             appointments = appointmentService.getAllSortedByDate();
         }
 
-        // Convert to DTOs
         List<AppointmentDTO> dtoList = appointments.stream().map(appt -> {
             AppointmentDTO dto = new AppointmentDTO();
             dto.setVisitId(appt.getVisitId());
@@ -80,7 +88,6 @@ public class AppointmentController {
                             ? String.valueOf(appt.getDoctor().getDepartment().getDepartmentId())
                             : null
             );
-
             return dto;
         }).toList();
 
@@ -123,8 +130,25 @@ public class AppointmentController {
         }
     }
 
+//    @GetMapping("/booked-time-slots")
+//    public ResponseEntity<List<String>> getBookedTimeSlots(
+//            @RequestParam Long doctorId,
+//            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+//    ) {
+//        List<Appointment> appointments = appointmentService.findByDoctorAndDate(doctorId, date);
+//
+//        List<String> bookedStartTimes = appointments.stream()
+//                .map(app -> app.getStartTime().toString())
+//                .toList();
+//
+//        return ResponseEntity.ok(bookedStartTimes);
+//    }
 
 
-
-
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteAppointment(@PathVariable Long id) {
+        appointmentService.deleteById(id);
+        return ResponseEntity.ok("Deleted");
+    }
 }

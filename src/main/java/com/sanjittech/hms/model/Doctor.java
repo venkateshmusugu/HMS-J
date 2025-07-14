@@ -24,6 +24,10 @@ public class Doctor {
     @JoinColumn(name = "department_id") // Foreign key to the department table
     private Department department; // Reference to the Department entity
 
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
 
 }
 

@@ -4,6 +4,7 @@ package com.sanjittech.hms.controller;
 
 import com.sanjittech.hms.dto.MedicalBillSuggestion;
 import com.sanjittech.hms.dto.PatientSuggestionDTO;
+import com.sanjittech.hms.model.HospitalConfig;
 import com.sanjittech.hms.model.MedicalBill;
 import com.sanjittech.hms.model.Patient;
 import com.sanjittech.hms.repository.MedicalBillRepository;
@@ -14,9 +15,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +29,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/medical-bills")
 @CrossOrigin(origins = "http://localhost:3002", allowCredentials = "true")
 public class MedicalBillController {
+
+    @Autowired
+    private com.sanjittech.hms.service.HospitalConfigService hospitalConfigService;
 
     @Autowired
     private MedicalBillService service;
@@ -87,9 +93,13 @@ public class MedicalBillController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/by-date")
+    @GetMapping(value = "/by-date", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MedicalBill>> getByDate(@RequestParam("date") String date) {
-        return ResponseEntity.ok(service.getBillsByDate(LocalDate.parse(date)));
+        System.out.println("📅 Date filter request received: " + date);
+        List<MedicalBill> bills = service.getBillsByDate(LocalDate.parse(date));
+        return ResponseEntity.ok(bills);
     }
+
+
 }
 

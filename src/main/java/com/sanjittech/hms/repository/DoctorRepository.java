@@ -6,10 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     @Query("SELECT d.doctorName, dep.departmentName, d.doctorId FROM Doctor d " +
             "JOIN d.department dep")
     List<Object[]> findDoctorsWithDepartment();
+
+    Optional<Doctor> findByUser_Username(String name);
 }

@@ -23,6 +23,9 @@ public class User {
     private String username;
     private String password; // This field should be excluded from toString()
 
+    @Column(unique = true)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     private UserRole role;
 

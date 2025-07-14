@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 public class RegisterRequest {
     private String username;
     private String password;
+    private  String email;
 
     @Override
     public String toString() {
@@ -43,4 +44,7 @@ public class RegisterRequest {
         this.role = role;
     }
 
+    public String getEmail() {
+        return  email;
+    }
 }

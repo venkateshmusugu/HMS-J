@@ -83,4 +83,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("excludeId") Long excludeId
     );
 
+    List<Appointment> findByDoctor_DoctorIdAndVisitDate(Long doctorId, LocalDate date);
+
+    List<Appointment> findByDoctor_DoctorId(Long doctorId);
+
+    // You can implement this manually using @Query if needed
+    @Query("SELECT a FROM Appointment a WHERE " +
+            "a.doctor.doctorId = :doctorId AND " +
+            "a.visitDate = :date AND " +
+            "(LOWER(a.patient.patientName) LIKE %:term% OR a.patient.phoneNumber LIKE %:term%)")
+    List<Appointment> findByDoctorAndDateAndSearch(
+            @Param("doctorId") Long doctorId,
+            @Param("date") LocalDate date,
+            @Param("term") String term);
+
 }

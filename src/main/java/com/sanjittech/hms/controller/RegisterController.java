@@ -37,20 +37,36 @@ public class RegisterController {
 
         try {
             UserRole roleEnum = UserRole.valueOf(dto.getRole().toUpperCase());
+
+            // 🚫 Restrict max registrations for non-DOCTOR roles
+            long existingCount = userRepository.countByRole(roleEnum);
+
+            if (roleEnum != UserRole.DOCTOR) {
+                if (existingCount >= 1) {
+                    return ResponseEntity
+                            .badRequest()
+                            .body("❌ Registration limit reached for role: " + roleEnum.name());
+                }
+            } else {
+                // ✅ For DOCTOR, limit to 5 registrations
+                if (existingCount >= 5) {
+                    return ResponseEntity
+                            .badRequest()
+                            .body("❌ Maximum 5 doctors can be registered.");
+                }
+            }
+
+            // ✅ Proceed with normal registration
             User user = new User();
             user.setUsername(dto.getUsername());
             user.setPassword(dto.getPassword());
+            user.setEmail(dto.getEmail());
             user.setRole(roleEnum);
 
             userService.register(user);
 
-            // ✅ Generate token
+            // ✅ Generate JWT token
             String token = jwtUtil.generateAccessToken(user.getUsername(), user.getRole().name());
-
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("message", "User registered successfully");
 
             return ResponseEntity.ok(Map.of(
                     "token", token,
@@ -63,4 +79,15 @@ public class RegisterController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @GetMapping("/role-counts")
+    public ResponseEntity<?> getRoleCounts() {
+        Map<String, Long> roleCounts = new HashMap<>();
+        for (UserRole role : UserRole.values()) {
+            roleCounts.put(role.name(), userRepository.countByRole(role));
+        }
+        return ResponseEntity.ok(roleCounts);
+    }
+
+
 }

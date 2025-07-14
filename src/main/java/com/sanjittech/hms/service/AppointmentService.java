@@ -166,4 +166,19 @@ public class AppointmentService {
     }
 
 
+    public void deleteById(Long id) {
+        appointmentRepository.deleteById(id);
+    }
+
+    public List<Appointment> findByDoctorAndDate(Long doctorId, LocalDate date) {
+        return appointmentRepository.findByDoctor_DoctorIdAndVisitDate(doctorId, date);
+    }
+
+    public List<Appointment> findByDoctor(Long doctorId) {
+        return appointmentRepository.findByDoctor_DoctorId(doctorId);
+    }
+
+    public List<Appointment> findByDoctorDateAndSearch(Long doctorId, LocalDate date, String term) {
+        return appointmentRepository.findByDoctorAndDateAndSearch(doctorId, date, term.toLowerCase());
+    }
 }

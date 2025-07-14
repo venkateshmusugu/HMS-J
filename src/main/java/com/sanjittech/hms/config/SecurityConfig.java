@@ -4,6 +4,7 @@ import com.sanjittech.hms.filter.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -38,23 +39,25 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for stateless JWT
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/users/login",
-                                "/api/users/register",
-                                "/api/users/refresh-token",
-                                "/api/csrf",
-                                "/api/patients"
-                        ).permitAll()
-
-                        .requestMatchers("/api/appointments/**", "/api/appointments/upcoming","/api/appointments/cancel/**")
+                        .requestMatchers("/api/users/login", "/api/users/register", "/api/users/refresh-token", "/api/patients/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/role-counts").permitAll()
+                        .requestMatchers("/api/doctors/**","/api/departments/**").hasAnyRole("DOCTOR", "ADMIN","RECEPTIONIST","SURGERY")
+                        .requestMatchers("/api/users/otp/**","api/user/**").permitAll()
+                        .requestMatchers("/api/appointments/**", "/api/appointments/upcoming", "/api/appointments/cancel/**")
                         .hasAnyRole("RECEPTIONIST", "DOCTOR", "ADMIN")
-
-                        .requestMatchers("/api/doctor-logs/**","/api/surgeries/**","/api/appointments/cancel/**").hasAnyRole("DOCTOR","SURGERY")
-                        .requestMatchers("/api/surgeries/**").hasAnyRole("SURGERY","DOCTOR")
-                        .requestMatchers("/api/surgery-logs/**","/api/surgery-appointments/**").hasAnyRole("SURGERY", "DOCTOR", "RECEPTIONIST") // ✅ Add this line
-                        .requestMatchers("/api/medical-bills/**","api/patients")
-                        .hasAnyRole("BILLING","ADMIN","DOCTOR","SURGERY")
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/doctor-logs/**", "/api/surgeries/**", "/api/appointments/cancel/**")
+                        .hasAnyRole("DOCTOR", "SURGERY")
+                        .requestMatchers("/api/surgeries/**").hasAnyRole("SURGERY", "DOCTOR")
+                        .requestMatchers("/api/surgery-logs/**", "/api/surgery-appointments/**")
+                        .hasAnyRole("ADMIN", "SURGERY", "DOCTOR", "RECEPTIONIST")
+                        .requestMatchers("/api/surgery-medications/**")  // ✅ ← ADD THIS LINE
+                        .hasAnyRole("SURGERY","DOCTOR")
+                        .requestMatchers("/api/medical-bills/**", "/api/patients/**", "/api/medicines/**")
+                        .hasAnyRole("BILLING", "ADMIN", "DOCTOR", "SURGERY")
+                        .requestMatchers(HttpMethod.DELETE, "/api/appointments/**").hasRole("ADMIN")
+                        .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/api/hospital-config/**").hasAnyRole("BILLING", "ADMIN", "DOCTOR", "SURGERY","RECEPTIONIST")
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
