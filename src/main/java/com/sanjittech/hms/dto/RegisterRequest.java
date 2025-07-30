@@ -1,24 +1,11 @@
 package com.sanjittech.hms.dto;
 
-import com.sanjittech.hms.config.UserRole;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-
 public class RegisterRequest {
     private String username;
     private String password;
-    private  String email;
-
-    @Override
-    public String toString() {
-        return "RegisterRequest{" +
-                "username='" + username + '\'' +
-                ", password='" + password + '\'' +
-                ", role='" + role + '\'' +
-                '}';
-    }
-
+    private String email;
     private String role; // RECEPTIONIST, DOCTOR, etc.
+
 
     public String getUsername() {
         return username;
@@ -36,6 +23,14 @@ public class RegisterRequest {
         this.password = password;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public String getRole() {
         return role;
     }
@@ -44,7 +39,18 @@ public class RegisterRequest {
         this.role = role;
     }
 
-    public String getEmail() {
-        return  email;
+
+
+
+
+    @Override
+    public String toString() {
+        return "RegisterRequest{" +
+                "username='" + username + '\'' +
+                ", password='" + password + '\'' +
+                ", email='" + email + '\'' +
+                ", role='" + role + '\'' +
+
+                '}';
     }
 }

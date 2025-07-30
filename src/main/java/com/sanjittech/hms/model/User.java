@@ -1,32 +1,50 @@
-package com.sanjittech.hms.model;
+    package com.sanjittech.hms.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.sanjittech.hms.config.UserRole;
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+    import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+    import com.sanjittech.hms.config.UserRole;
+    import jakarta.persistence.*;
+    import lombok.Getter;
+    import lombok.NoArgsConstructor;
+    import lombok.Setter;
+    import lombok.ToString;
 
-@Setter
-@Getter
-@Entity
-@NoArgsConstructor
-@Table(name = "users")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-@ToString(exclude = "password") // <--- ADD THIS LINE!
-public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Setter
+    @Getter
+    @Entity
+    @NoArgsConstructor
+    @Table(name = "users")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @ToString(exclude = "password")
+    public class User {
 
-    private String username;
-    private String password; // This field should be excluded from toString()
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long id;
 
-    @Column(unique = true)
-    private String email;
+        private String username;
 
-    @Enumerated(EnumType.STRING)
-    private UserRole role;
+        private String password;
 
-}
+        @Column(unique = true)
+        private String email;
+
+        @Enumerated(EnumType.STRING)
+        private UserRole role;
+
+        // ✅ Add this field to assign user to a specific hospital
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "hospital_id")
+        @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+        private Hospital hospital;
+
+        @Transient
+        private Long hospitalId;
+
+        public Long getHospitalId() {
+            return hospitalId;
+        }
+
+        public void setHospitalId(Long hospitalId) {
+            this.hospitalId = hospitalId;
+        }
+    }

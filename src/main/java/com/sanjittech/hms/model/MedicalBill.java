@@ -34,6 +34,12 @@ public class MedicalBill {
     @JsonIgnoreProperties({"bills", "doctorLogs"})
     private Patient patient;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
+
+
     @OneToMany(mappedBy = "medicalBill", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("medicalBill")
     private List<MedicalBillEntry> entries = new ArrayList<>();

@@ -16,7 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/doctor-logs")
 @CrossOrigin("http://localhost:3002")
-public class    DoctorLogController {
+public class  DoctorLogController {
 
     @Autowired
     private DoctorLogService service;
@@ -25,8 +25,9 @@ public class    DoctorLogController {
     private SurgeryAppointmentRepository surgeryRepository;
 
     @GetMapping("/by-appointment/{apptId}")
-    public ResponseEntity<List<DoctorLog>> getByAppointment(@PathVariable Long apptId) {
-        return ResponseEntity.ok(service.findByAppointment(apptId));
+    public ResponseEntity<List<DoctorLog>> getByAppointment(@PathVariable Long apptId,
+                                                            @RequestParam Long hospitalId) {
+        return ResponseEntity.ok(service.findByAppointment(apptId, hospitalId));
     }
 
     @GetMapping("/by-patient/{patientId}")
@@ -41,7 +42,4 @@ public class    DoctorLogController {
     ) {
         return ResponseEntity.ok(service.createLogFromDTO(apptId, dto));
     }
-
-
-
 }

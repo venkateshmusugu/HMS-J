@@ -1,5 +1,6 @@
 package com.sanjittech.hms.controller;
 
+import com.sanjittech.hms.model.Hospital;
 import com.sanjittech.hms.model.HospitalConfig;
 import com.sanjittech.hms.service.HospitalConfigService;
 import org.springframework.beans.factory.annotation.Autowired;

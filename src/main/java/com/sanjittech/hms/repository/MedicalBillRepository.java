@@ -1,5 +1,6 @@
 package com.sanjittech.hms.repository;
 
+import com.sanjittech.hms.model.Hospital;
 import com.sanjittech.hms.model.MedicalBill;
 import com.sanjittech.hms.model.Patient;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,4 +19,6 @@ public interface MedicalBillRepository extends JpaRepository<MedicalBill, Long> 
 
 
      Optional<MedicalBill> findByPatientAndStatus(Patient patient, String open);
+
+    Optional<MedicalBill> findByPatientAndStatusAndHospital(Patient patient, String open, Hospital hospital);
 }

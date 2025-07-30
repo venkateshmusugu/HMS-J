@@ -20,10 +20,11 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        System.out.println("LOADING USER: " + username + " | stack depth: " + Thread.currentThread().getStackTrace().length);
-        User userEntity = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        System.out.println("Attempting login with email/username: " + username);
+        User user = userRepository.findByUsernameOrEmail(username, username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + username));
 
-        return new SecurityUser(userEntity);
+        return new SecurityUser(user); // Your custom UserDetails implementation
     }
+
 }

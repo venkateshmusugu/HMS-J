@@ -11,4 +11,6 @@ public class OtpVerifyRequest {
     private String username;
     private String password;
     private String role;
+    private Long hospitalId;
+
 }

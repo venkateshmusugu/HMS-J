@@ -46,8 +46,9 @@ public class JwtFilter extends OncePerRequestFilter {
                     Claims claims = jwtUtil.extractAllClaims(token);
                     String username = claims.getSubject();
                     String role = claims.get("role", String.class);
+                    Long hospitalId = claims.get("hospitalId", Long.class);
 
-                    System.out.println("✅ Parsed JWT - Username: " + username + ", Role: " + role);
+                    System.out.println("✅ Parsed JWT - Username: " + username + ", Role: " + role + ", Hospital ID: " + hospitalId);
 
                     List<GrantedAuthority> authorities = Collections.singletonList(
                             new SimpleGrantedAuthority("ROLE_" + role)
@@ -57,6 +58,8 @@ public class JwtFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(username, null, authorities);
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                    request.setAttribute("hospitalId", hospitalId); // 👈 Can be used later in controllers if needed
 
                     System.out.println("✅ SecurityContext set for user: " + username);
                 }

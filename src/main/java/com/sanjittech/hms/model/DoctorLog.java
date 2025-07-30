@@ -46,10 +46,10 @@ public class DoctorLog {
     @JsonIgnoreProperties({"doctorLogs"})
     private Patient patient;
 
-
-
-
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
 
 
     @ManyToOne(fetch = FetchType.EAGER)

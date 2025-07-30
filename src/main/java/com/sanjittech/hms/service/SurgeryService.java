@@ -4,6 +4,7 @@ import com.sanjittech.hms.dto.SurgeryLogDto;
 import com.sanjittech.hms.dto.SurgeryMedicationDTO;
 import com.sanjittech.hms.model.*;
 import com.sanjittech.hms.repository.*;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,36 +34,27 @@ public class SurgeryService {
     @Autowired
     private MedicalBillRepository medicalBillRepository;
 
-    public void bookSurgery(Long patientId, SurgeryLogDto dto) {
-        Patient patient = patientRepo.findById(patientId)
+    @Autowired
+    private UserService userService;
+
+    public void bookSurgery(Long patientId, SurgeryLogDto dto, HttpServletRequest request) {
+        User user = userService.getLoggedInUser(request);
+        if (user == null || user.getHospital() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid user");
+        }
+
+        Patient patient = patientRepo.findByPatientIdAndHospital(patientId, user.getHospital())
                 .orElseThrow(() -> new RuntimeException("Patient not found"));
 
         Surgery surgery = Surgery.builder()
                 .patient(patient)
+                .hospital(user.getHospital())
                 .surgeryDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null)
                 .reasonForSurgery(dto.getReasonForSurgery())
                 .diagnosis(dto.getDiagnosis())
                 .build();
 
         surgeryRepo.save(surgery);
-    }
-
-    public Surgery logCompletedSurgery(Long appointmentId, SurgeryLogDto dto) {
-        SurgeryAppointment appointment = appointmentRepo.findById(appointmentId)
-                .orElseThrow(() -> new RuntimeException("Surgery appointment not found"));
-
-        Surgery surgery = Surgery.builder()
-                .patient(appointment.getPatient())
-                .surgeryDate(dto.getDate() != null ? LocalDate.parse(dto.getDate()) : null)
-                .reasonForSurgery(dto.getReasonForSurgery())
-                .diagnosis(dto.getDiagnosis())
-                .build();
-
-        surgeryRepo.save(surgery);
-        appointment.setSurgeryLog(surgery);
-        appointmentRepo.save(appointment);
-
-        return surgery;
     }
 
     public Surgery updateSurgery(Long id, SurgeryLogDto dto) {
@@ -98,17 +90,21 @@ public class SurgeryService {
         return appointmentRepo.findByPatientPatientId(patientId);
     }
 
+    public Optional<SurgeryAppointment> getSurgeryAppointmentById(Long id) {
+        return appointmentRepo.findById(id);
+    }
+
     public List<Map<String, Object>> getMedicationLogsBySurgery(Long surgeryId) {
         List<MedicalBillEntry> entries = medRepo.findBySurgery_Id(surgeryId);
-
-        // Group entries by date
         Map<LocalDate, List<MedicalBillEntry>> groupedByDate = new TreeMap<>(Comparator.reverseOrder());
+
         for (MedicalBillEntry entry : entries) {
             LocalDate date = entry.getDate() != null ? entry.getDate() : LocalDate.now();
             groupedByDate.computeIfAbsent(date, k -> new ArrayList<>()).add(entry);
         }
 
         List<Map<String, Object>> logs = new ArrayList<>();
+
         for (Map.Entry<LocalDate, List<MedicalBillEntry>> entry : groupedByDate.entrySet()) {
             Map<String, Object> log = new HashMap<>();
             LocalDate logDate = entry.getKey();
@@ -116,8 +112,8 @@ public class SurgeryService {
 
             SurgeryAppointment appt = dateEntries.get(0).getSurgery();
             log.put("date", logDate.toString());
-            log.put("diagnosis", appt != null && appt.getDiagnosis() != null ? appt.getDiagnosis() : "N/A");
-            log.put("reasonForSurgery", appt != null && appt.getReason() != null ? appt.getReason() : "N/A");
+            log.put("diagnosis", appt != null ? appt.getDiagnosis() : "N/A");
+            log.put("reasonForSurgery", appt != null ? appt.getReason() : "N/A");
 
             List<Map<String, Object>> meds = new ArrayList<>();
             for (MedicalBillEntry e : dateEntries) {
@@ -136,12 +132,15 @@ public class SurgeryService {
         return logs;
     }
 
+    public void saveMedicationsForSurgery(Long surgeryAppointmentId, SurgeryMedicationDTO dto, HttpServletRequest request) {
+        User user = userService.getLoggedInUser(request);
+        if (user == null || user.getHospital() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid user");
+        }
 
-    public void saveMedicationsForSurgery(Long surgeryAppointmentId, SurgeryMedicationDTO dto) {
         SurgeryAppointment appointment = appointmentRepo.findById(surgeryAppointmentId)
                 .orElseThrow(() -> new RuntimeException("Surgery appointment not found"));
 
-        // Update diagnosis, reason, followUp
         appointment.setDiagnosis(dto.getDiagnosis());
         appointment.setReason(dto.getReasonForSurgery());
         appointment.setFollowUpDate(LocalDate.parse(dto.getFollowUpDate()));
@@ -150,10 +149,11 @@ public class SurgeryService {
         Patient patient = appointment.getPatient();
 
         MedicalBill bill = medicalBillRepository
-                .findByPatientAndStatus(patient, "OPEN")
+                .findByPatientAndStatusAndHospital(patient, "OPEN", user.getHospital())
                 .orElseGet(() -> {
                     MedicalBill newBill = new MedicalBill();
                     newBill.setPatient(patient);
+                    newBill.setHospital(user.getHospital());
                     newBill.setBillDate(LocalDate.now());
                     newBill.setStatus("OPEN");
                     return medicalBillRepository.save(newBill);
@@ -162,8 +162,6 @@ public class SurgeryService {
         List<MedicalBillEntry> entries = new ArrayList<>();
 
         for (MedicalBillEntry entry : dto.getMedicines()) {
-            Medicine medicine;
-
             String medName = entry.getMedicineName();
             String dosage = entry.getDosage();
 
@@ -171,22 +169,22 @@ public class SurgeryService {
                 throw new IllegalArgumentException("Medicine name or dosage is missing");
             }
 
-            medicine = medicineRepo.findByNameIgnoreCaseAndDosageIgnoreCase(medName, dosage)
+            Medicine medicine = medicineRepo.findByNameIgnoreCaseAndDosageIgnoreCase(medName, dosage)
                     .orElseGet(() -> {
                         Medicine newMed = Medicine.builder()
                                 .name(medName)
                                 .dosage(dosage)
-                                .amount(0.0)  // or any default
+                                .amount(0.0)
                                 .build();
                         return medicineRepo.save(newMed);
                     });
 
-            // Set to entry
             entry.setMedicine(medicine);
             entry.setSurgery(appointment);
             entry.setPatient(patient);
-            entry.setPurpose("SURGERY");
             entry.setMedicalBill(bill);
+            entry.setHospital(user.getHospital());
+            entry.setPurpose("SURGERY");
 
             if (entry.getQuantity() == null || entry.getQuantity() <= 0)
                 entry.setQuantity(1);
@@ -200,15 +198,6 @@ public class SurgeryService {
             entries.add(entry);
         }
 
-
-
         medRepo.saveAll(entries);
     }
-
-
-
-    public Optional<SurgeryAppointment> getSurgeryAppointmentById(Long id) {
-        return appointmentRepo.findById(id);
-    }
-
 }

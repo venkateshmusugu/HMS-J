@@ -20,7 +20,7 @@ import java.util.List;
 public class Surgery {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long surgeryLogId; // ✅ Use correct name everywhere
+    private Long Id; // ✅ Use correct name everywhere
 
     private LocalDate surgeryDate;
     private String medication;
@@ -33,6 +33,12 @@ public class Surgery {
     @JoinColumn(name = "patient_id")
     @JsonIgnoreProperties({"patient"})
     private Patient patient;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Hospital hospital;
+
 
 
 

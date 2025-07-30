@@ -19,22 +19,24 @@ public class DoctorLogService {
     private DoctorLogRepo repo;
     @Autowired
     private MedicineRepository medicineRepository;
-
     @Autowired
     private MedicalBillService medicalBillService;
-
     @Autowired
     private MedicalBillRepository medicalBillRepository;
-
-
-
     @Autowired
     private AppointmentRepository apptRepo;
 
     @Autowired
     private MedicalBillEntryRepository medicalBillEntryRepo;
 
-    public List<DoctorLog> findByAppointment(Long apptId) {
+    public List<DoctorLog> findByAppointment(Long apptId, Long hospitalId) {
+        Appointment appt = apptRepo.findById(apptId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        if (!appt.getHospital().getId().equals(hospitalId)) {
+            throw new RuntimeException("Unauthorized: Appointment does not belong to this hospital");
+        }
+
         return repo.findByAppointment_VisitId(apptId);
     }
 
@@ -76,7 +78,6 @@ public class DoctorLogService {
                     map.put("medicines", medicines);
                     System.out.println("🧾 Prescription for: " + date);
                     System.out.println(medicines);
-
                     return map;
                 })
                 .sorted(Comparator.comparing(m -> (LocalDate) m.get("date")))
@@ -104,7 +105,6 @@ public class DoctorLogService {
                 entry.setPurpose("DOCTOR");
             }
         }
-
         return repo.save(log);
     }
 
@@ -165,15 +165,9 @@ public class DoctorLogService {
                 entry.setSubtotal(med.getAmount() * entry.getIssuedQuantity());
                 entries.add(entry);
             }
-
             // 💾 Save all medicine entries
             medicalBillEntryRepo.saveAll(entries);
         }
-
-        return savedLog; // ✅ Make sure to return the saved log
+        return savedLog;
     }
-
-
-
-
 }

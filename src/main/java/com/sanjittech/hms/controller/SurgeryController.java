@@ -5,6 +5,7 @@ import com.sanjittech.hms.model.Surgery;
 import com.sanjittech.hms.model.SurgeryAppointment;
 import com.sanjittech.hms.repository.SurgeryAppointmentRepository;
 import com.sanjittech.hms.service.SurgeryService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,27 +23,33 @@ public class SurgeryController {
     @Autowired
     private SurgeryAppointmentRepository surgeryAppointmentRepository;
 
-
     @Autowired
     private SurgeryService surgeryService;
 
+    // ✅ Book surgery for patient (hospital-aware)
     @PostMapping("/book/{patientId}")
-    public ResponseEntity<?> book(@PathVariable Long patientId, @RequestBody SurgeryLogDto dto) {
-        surgeryService.bookSurgery(patientId, dto);
+    public ResponseEntity<?> book(@PathVariable Long patientId,
+                                  @RequestBody SurgeryLogDto dto,
+                                  HttpServletRequest request) {
+        surgeryService.bookSurgery(patientId, dto, request);
         return ResponseEntity.ok("Surgery booked");
     }
 
+    // ✅ Update surgery log
     @PutMapping("/{id}")
-    public ResponseEntity<Surgery> update(@PathVariable Long id, @RequestBody SurgeryLogDto dto) {
+    public ResponseEntity<Surgery> update(@PathVariable Long id,
+                                          @RequestBody SurgeryLogDto dto) {
         return ResponseEntity.ok(surgeryService.updateSurgery(id, dto));
     }
 
+    // ✅ Delete surgery log and medication entries
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         surgeryService.deleteSurgery(id);
         return ResponseEntity.ok("Surgery deleted");
     }
 
+    // ✅ Get surgeries by date
     @GetMapping("/by-date")
     public ResponseEntity<List<SurgeryLogDto>> getByDate(@RequestParam String date) {
         LocalDate parsedDate = LocalDate.parse(date);
@@ -53,6 +60,7 @@ public class SurgeryController {
         return ResponseEntity.ok(dtoList);
     }
 
+    // ✅ Get surgery appointment by ID
     @GetMapping("/{id}")
     public ResponseEntity<SurgeryAppointment> getSurgeryById(@PathVariable Long id) {
         return surgeryAppointmentRepository.findById(id)
@@ -60,6 +68,7 @@ public class SurgeryController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Surgery not found"));
     }
 
+    // ✅ Get all surgery appointments by patient
     @GetMapping("/by-patient/{patientId}")
     public ResponseEntity<List<SurgeryLogDto>> getByPatient(@PathVariable Long patientId) {
         List<SurgeryAppointment> appointments = surgeryService.getSurgeryAppointmentsByPatient(patientId);
@@ -68,13 +77,12 @@ public class SurgeryController {
                 .toList();
         return ResponseEntity.ok(dtoList);
     }
+
+    // ✅ Get latest surgery appointment by patient
     @GetMapping("/latest-by-patient/{patientId}")
     public ResponseEntity<SurgeryLogDto> getLatestSurgery(@PathVariable Long patientId) {
         return surgeryAppointmentRepository.findTopByPatient_PatientIdOrderBySurgeryDateDesc(patientId)
                 .map(surgery -> ResponseEntity.ok(new SurgeryLogDto(surgery)))
                 .orElse(ResponseEntity.notFound().build());
     }
-
-
-
 }

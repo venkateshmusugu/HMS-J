@@ -1,5 +1,6 @@
 package com.sanjittech.hms.repository;
 
+import com.sanjittech.hms.model.Hospital;
 import com.sanjittech.hms.model.SurgeryAppointment;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -8,7 +9,14 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SurgeryAppointmentRepository extends JpaRepository<SurgeryAppointment, Long> {
+
     List<SurgeryAppointment> findBySurgeryDate(LocalDate date);
+
     List<SurgeryAppointment> findByPatientPatientId(Long patientId);
+
+    List<SurgeryAppointment> findByHospitalAndSurgeryDate(Hospital hospital, LocalDate date);
+
+    List<SurgeryAppointment> findByHospitalAndPatientPatientId(Hospital hospital, Long patientId);
+
     Optional<SurgeryAppointment> findTopByPatient_PatientIdOrderBySurgeryDateDesc(Long patientId);
 }

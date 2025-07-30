@@ -3,6 +3,7 @@ package com.sanjittech.hms.controller;
 import com.sanjittech.hms.dto.SurgeryAppointmentDTO;
 import com.sanjittech.hms.model.SurgeryAppointment;
 import com.sanjittech.hms.service.SurgeryAppointmentService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,20 +21,22 @@ public class SurgeryAppointmentController {
 
     @PostMapping("/book/{patientId}")
     public ResponseEntity<SurgeryAppointment> book(@PathVariable Long patientId,
-                                                   @RequestBody SurgeryAppointmentDTO dto) {
-        return ResponseEntity.ok(appointmentService.bookAppointment(patientId, dto));
+                                                   @RequestBody SurgeryAppointmentDTO dto,
+                                                   HttpServletRequest request) {
+        return ResponseEntity.ok(appointmentService.bookAppointment(patientId, dto, request));
     }
 
     @GetMapping("/by-date")
-    public ResponseEntity<List<SurgeryAppointmentDTO>> getByDate(@RequestParam("date") String dateStr) {
+    public ResponseEntity<List<SurgeryAppointmentDTO>> getByDate(@RequestParam("date") String dateStr,
+                                                                 HttpServletRequest request) {
         LocalDate date = LocalDate.parse(dateStr);
-        List<SurgeryAppointmentDTO> result = appointmentService.getAppointmentsWithDoctorPatientNote(date);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(appointmentService.getAppointmentsWithDoctorPatientNote(date, request));
     }
 
     @GetMapping("/by-patient/{patientId}")
-    public ResponseEntity<List<SurgeryAppointment>> getByPatient(@PathVariable Long patientId) {
-        return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId));
+    public ResponseEntity<List<SurgeryAppointment>> getByPatient(@PathVariable Long patientId,
+                                                                 HttpServletRequest request) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId, request));
     }
 
     @GetMapping("/by-id/{id}")

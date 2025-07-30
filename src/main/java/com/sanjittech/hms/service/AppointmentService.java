@@ -1,14 +1,13 @@
 package com.sanjittech.hms.service;
 
 import com.sanjittech.hms.dto.AppointmentDTO;
-import com.sanjittech.hms.model.Appointment;
-import com.sanjittech.hms.model.AppointmentStatus;
-import com.sanjittech.hms.model.Doctor;
-import com.sanjittech.hms.model.Patient;
+import com.sanjittech.hms.model.*;
 import com.sanjittech.hms.repository.AppointmentRepository;
 import com.sanjittech.hms.repository.DoctorRepository;
 import com.sanjittech.hms.repository.PatientRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -28,157 +27,126 @@ public class AppointmentService {
     private DoctorRepository doctorRepository;
 
     public Appointment saveAppointmentFromDTO(AppointmentDTO dto) {
-        if (dto.getDoctorId() == null) throw new IllegalArgumentException("Doctor ID must not be null");
-        if (dto.getPatientId() == null) throw new IllegalArgumentException("Patient ID must not be null");
+        Doctor doctor = doctorRepository.findById(dto.getDoctorId()).orElseThrow();
+        Patient patient = patientRepository.findById(dto.getPatientId()).orElseThrow();
 
-        Doctor doctor = doctorRepository.findById(dto.getDoctorId())
-                .orElseThrow(() -> new RuntimeException("Doctor not found"));
-        Patient patient = patientRepository.findById(dto.getPatientId())
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
-
-        // Check slot logic
-        boolean available = isSlotAvailable(dto.getVisitDate(),
-                dto.getStartTime().toString(),
-                dto.getEndTime().toString(),
-                dto.getDoctorId());
-
-        if (!available) throw new RuntimeException("❌ Time slot already booked.");
-
-        Appointment appt = Appointment.builder()
-                .visitDate(dto.getVisitDate())
-                .startTime(dto.getStartTime())
-                .endTime(dto.getEndTime())
-                .reasonForVisit(dto.getReasonForVisit())
-                .doctor(doctor)
-                .patient(patient)
-                .build();
-
-        return appointmentRepository.save(appt);
+        if (!isSlotAvailable(dto.getVisitDate(), dto.getStartTime().toString(), dto.getEndTime().toString(), dto.getDoctorId()))
+            throw new RuntimeException("Slot unavailable");
+        Hospital hospital = doctor.getHospital();
+        Department department = doctor.getDepartment();
+        return appointmentRepository.save(Appointment.builder()
+                        .visitDate(dto.getVisitDate())
+                        .startTime(dto.getStartTime())
+                        .endTime(dto.getEndTime())
+                        .reasonForVisit(dto.getReasonForVisit())
+                        .doctor(doctor)
+                        .department(department)
+                        .patient(patient)
+                        .status(AppointmentStatus.ACTIVE)
+                        .hospital(hospital) // ✅ set hospital
+                        .build()
+        );
     }
 
+    public List<AppointmentDTO> getFilteredAppointments(String searchTerm, LocalDate date, Long doctorId, Long hospitalId) {
+        List<Appointment> appointments;
 
+        if (doctorId != null && date != null && searchTerm != null) {
+            appointments = appointmentRepository.findByDoctorAndDateAndSearchAndHospital(doctorId, date, searchTerm.toLowerCase(), hospitalId);
+        } else if (doctorId != null && date != null) {
+            appointments = appointmentRepository.findByDoctor_DoctorIdAndVisitDateAndHospital_Id(doctorId, date, hospitalId);
 
+        } else if (doctorId != null) {
+            appointments = appointmentRepository.findByDoctor_DoctorIdAndHospital_Id(doctorId, hospitalId);
 
-    public Appointment updateAppointment(Long id, Appointment appointment) {
-        Appointment existingAppointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + id));
+        } else if (date != null && searchTerm != null) {
+            appointments = appointmentRepository.findByVisitDateAndPatientNameOrMobileAndHospital_Id(date, searchTerm, hospitalId);
 
-        Long doctorId = appointment.getDoctor().getDoctorId();
-        LocalDate date = appointment.getVisitDate();
-        LocalTime start = appointment.getStartTime();
-        LocalTime end = appointment.getEndTime();
+        } else if (searchTerm != null) {
+            appointments = appointmentRepository.findByPatientNameOrMobileAndHospital_Id(searchTerm, hospitalId);
 
-        List<Appointment> overlapping = appointmentRepository.findOverlappingAppointmentsWithExclusion(
-                doctorId, date, start, end, id
-        );
+        } else if (date != null) {
+            appointments = appointmentRepository.findByDateWithDoctorAndPatientAndHospital_Id(date, hospitalId);
 
-        if (!overlapping.isEmpty()) {
-            throw new RuntimeException("❌ Updated time slot overlaps with another appointment.");
+        } else {
+            appointments = appointmentRepository.findAllByHospitalIdOrderByVisitDateAsc(hospitalId);
         }
 
-        // Update fields
-        existingAppointment.setVisitDate(date);
-        existingAppointment.setStartTime(start);
-        existingAppointment.setEndTime(end);
-        existingAppointment.setDepartmentId(appointment.getDepartmentId());
-        existingAppointment.setReasonForVisit(appointment.getReasonForVisit());
-
-        Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(() -> new RuntimeException("Doctor not found"));
-        existingAppointment.setDoctor(doctor);
-
-        Patient patient = patientRepository.findById(appointment.getPatient().getPatientId())
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
-        existingAppointment.setPatient(patient);
-
-        return appointmentRepository.save(existingAppointment);
+        return appointments.stream().map(this::toDTO).toList();
     }
 
-    // ✅ Get one appointment by ID
-    public Appointment findById(Long id) {
-        return appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + id));
-    }
-
-    // ✅ Get all appointments sorted by date
-    public List<Appointment> getAllSortedByDate() {
-        return appointmentRepository.findAllByOrderByVisitDateAsc();
-    }
-
-    // ✅ Find by visit date
-    public List<Appointment> findByDate(LocalDate date) {
-        return appointmentRepository.findByDateWithDoctorAndPatient(date);
-    }
-
-
-    // ✅ Search by name or phone
-    public List<Appointment> findByPatientNameOrMobile(String searchTerm) {
-        return appointmentRepository.findByPatientNameOrMobile(searchTerm);
-    }
-
-    // ✅ Filter by date and name/phone
-    public List<Appointment> findByDateAndPatientNameOrMobile(LocalDate date, String searchTerm) {
-        return appointmentRepository.findByVisitDateAndPatientNameOrMobile(date, searchTerm);
+    private AppointmentDTO toDTO(Appointment appt) {
+        return AppointmentDTO.builder()
+                .visitId(appt.getVisitId())
+                .visitDate(appt.getVisitDate())
+                .startTime(appt.getStartTime())
+                .endTime(appt.getEndTime())
+                .reasonForVisit(appt.getReasonForVisit())
+                .patientId(appt.getPatient().getPatientId())
+                .patientName(appt.getPatient().getPatientName())
+                .doctorId(appt.getDoctor().getDoctorId())
+                .doctorName(appt.getDoctor().getDoctorName())
+                .hospitalId(appt.getHospital().getId())
+                .departmentId(String.valueOf(appt.getDoctor().getDepartment().getDepartmentId()))
+                .build();
     }
 
     public boolean isSlotAvailable(LocalDate date, String startTime, String endTime, Long doctorId) {
-        List<Appointment> appointments = appointmentRepository.findByVisitDateAndDoctorId(date, doctorId);
-
-        LocalTime newStart = LocalTime.parse(startTime);
-        LocalTime newEnd = LocalTime.parse(endTime);
-
-        for (Appointment a : appointments) {
-            LocalTime existingStart = a.getStartTime();
-            LocalTime existingEnd = a.getEndTime();
-
-
-            boolean overlap = newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart);
-            if (overlap) {
-                return false;
-            }
-        }
-
-        return true;
+        LocalTime start = LocalTime.parse(startTime);
+        LocalTime end = LocalTime.parse(endTime);
+        List<Appointment> existing = appointmentRepository.findByVisitDateAndDoctorId(date, doctorId);
+        return existing.stream().noneMatch(a -> start.isBefore(a.getEndTime()) && end.isAfter(a.getStartTime()));
     }
 
-    public Appointment getAppointmentById(Long id) {
-        return appointmentRepository.findById(id).orElse(null);
+    public Appointment updateAppointment(Long id, Appointment appointment) {
+        Appointment existing = appointmentRepository.findById(id).orElseThrow();
+        existing.setVisitDate(appointment.getVisitDate());
+        existing.setStartTime(appointment.getStartTime());
+        existing.setEndTime(appointment.getEndTime());
+        existing.setReasonForVisit(appointment.getReasonForVisit());
+
+        Doctor doctor = doctorRepository.findById(appointment.getDoctor().getDoctorId()).orElseThrow();
+        Patient patient = patientRepository.findById(appointment.getPatient().getPatientId()).orElseThrow();
+
+        existing.setDoctor(doctor);
+        existing.setPatient(patient);
+        return appointmentRepository.save(existing);
+    }
+
+    public Appointment findById(Long id) {
+        return appointmentRepository.findById(id).orElseThrow();
     }
 
     public Appointment bookAppointmentWithPatientId(Long patientId, AppointmentDTO dto) {
-        Patient patient = patientRepository.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found with ID: " + patientId));
+        Patient patient = patientRepository.findById(patientId).orElseThrow();
+        Doctor doctor = doctorRepository.findById(dto.getDoctorId()).orElseThrow();
+        Hospital hospital = doctor.getHospital();
 
-        Doctor doctor = doctorRepository.findById(dto.getDoctorId())
-                .orElseThrow(() -> new RuntimeException("Doctor not found with ID: " + dto.getDoctorId()));
-
-        Appointment appointment = Appointment.builder()
-                .visitDate(dto.getVisitDate())
-                .startTime(dto.getStartTime())
-                .endTime(dto.getEndTime())
-                .reasonForVisit(dto.getReasonForVisit())
-                .doctor(doctor)
-                .patient(patient)
-                .status(AppointmentStatus.ACTIVE)
-                .build();
-
-        return appointmentRepository.save(appointment);
+        return appointmentRepository.save(
+                Appointment.builder()
+                        .visitDate(dto.getVisitDate())
+                        .startTime(dto.getStartTime())
+                        .endTime(dto.getEndTime())
+                        .reasonForVisit(dto.getReasonForVisit())
+                        .doctor(doctor)
+                        .patient(patient)
+                        .hospital(hospital)
+                        .status(AppointmentStatus.ACTIVE)
+                        .build()
+        );
     }
-
 
     public void deleteById(Long id) {
         appointmentRepository.deleteById(id);
     }
 
-    public List<Appointment> findByDoctorAndDate(Long doctorId, LocalDate date) {
-        return appointmentRepository.findByDoctor_DoctorIdAndVisitDate(doctorId, date);
-    }
-
-    public List<Appointment> findByDoctor(Long doctorId) {
-        return appointmentRepository.findByDoctor_DoctorId(doctorId);
-    }
-
-    public List<Appointment> findByDoctorDateAndSearch(Long doctorId, LocalDate date, String term) {
-        return appointmentRepository.findByDoctorAndDateAndSearch(doctorId, date, term.toLowerCase());
+    public ResponseEntity<String> cancelAppointment(Long id) {
+        Appointment appt = appointmentRepository.findById(id).orElse(null);
+        if (appt != null) {
+            appt.setStatus(AppointmentStatus.CANCELLED);
+            appointmentRepository.save(appt);
+            return ResponseEntity.ok("Appointment cancelled.");
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Appointment not found.");
     }
 }

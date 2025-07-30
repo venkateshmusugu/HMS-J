@@ -3,49 +3,25 @@ package com.sanjittech.hms.service;
 import com.sanjittech.hms.dto.DoctorDTO;
 import com.sanjittech.hms.model.Department;
 import com.sanjittech.hms.model.Doctor;
+import com.sanjittech.hms.model.Hospital;
 import com.sanjittech.hms.repository.DepartmentRepository;
 import com.sanjittech.hms.repository.DoctorRepository;
+import com.sanjittech.hms.repository.HospitalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class DoctorService {
-
     @Autowired
-    private DoctorRepository doctorRepository;
+    private HospitalRepository hospitalRepository;
 
-    @Autowired
-    private DepartmentRepository departmentRepository;
+    @Autowired private DoctorRepository doctorRepository;
+    @Autowired private DepartmentRepository departmentRepository;
 
-    public List<Doctor> getAllDoctors() {
-        return doctorRepository.findAll();
-    }
-
-    public Optional<String> addDoctor(String doctorName, Long departmentId) {
-        Optional<Department> deptOpt = departmentRepository.findById(departmentId);
-        if (deptOpt.isEmpty()) {
-            return Optional.of("Invalid department ID");
-        }
-
-        Doctor doctor = Doctor.builder()
-                .doctorName(doctorName)
-                .department(deptOpt.get())
-                .build();
-
-        doctorRepository.save(doctor);
-        return Optional.empty();
-    }
-
-    public long getDoctorCount() {
-        return doctorRepository.count();
-    }
-
-    public List<DoctorDTO> getDoctorsWithDepartment() {
-        List<Object[]> results = doctorRepository.findDoctorsWithDepartment();
+    public List<DoctorDTO> getDoctorsWithDepartment(Hospital hospital) {
+        List<Object[]> results = doctorRepository.findDoctorsWithDepartmentByHospital(hospital);
         List<DoctorDTO> doctors = new ArrayList<>();
 
         for (Object[] result : results) {
@@ -59,4 +35,29 @@ public class DoctorService {
         return doctors;
     }
 
+    public long getDoctorCount(Hospital hospital) {
+        return doctorRepository.countByHospital(hospital);
+    }
+
+    public Optional<String> addDoctor(String doctorName, Long departmentId, Hospital hospital) {
+        Optional<Department> deptOpt = departmentRepository.findByDepartmentIdAndHospital(departmentId, hospital);
+        if (deptOpt.isEmpty()) {
+            return Optional.of("Invalid department ID for this hospital");
+        }
+
+        Doctor doctor = Doctor.builder()
+                .doctorName(doctorName)
+                .department(deptOpt.get())
+                .hospital(hospital)
+                .build();
+
+        doctorRepository.save(doctor);
+        return Optional.empty();
+    }
+
+    public List<DoctorDTO> getDoctorsWithDepartmentByHospitalId(Long hospitalId) {
+        return hospitalRepository.findById(hospitalId)
+                .map(this::getDoctorsWithDepartment)
+                .orElseThrow(() -> new RuntimeException("Hospital not found"));
+    }
 }

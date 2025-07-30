@@ -9,61 +9,72 @@ import com.sanjittech.hms.repository.DepartmentRepository;
 import com.sanjittech.hms.repository.DoctorRepository;
 import com.sanjittech.hms.repository.UserRepository;
 import com.sanjittech.hms.service.DoctorService;
+import com.sanjittech.hms.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/doctors")
 public class DoctorController {
-    @Autowired
-    private DepartmentRepository departmentRepository;
 
-    @Autowired
-    private DoctorRepository doctorRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private DoctorService doctorService;
+    @Autowired private DoctorService doctorService;
+    @Autowired private DepartmentRepository departmentRepository;
+    @Autowired private DoctorRepository doctorRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private UserService userService;
 
     @GetMapping
-    public List<DoctorDTO> getDoctorsWithDepartment() {
-        return doctorService.getDoctorsWithDepartment();
+    public ResponseEntity<List<DoctorDTO>> getDoctorsWithDepartment(HttpServletRequest request) {
+        User user = userService.getLoggedInUser(request);
+        if (user == null || user.getHospital() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(doctorService.getDoctorsWithDepartment(user.getHospital()));
     }
 
     @GetMapping("/count")
-    public ResponseEntity<Long> getDoctorCount() {
-        long count = doctorService.getDoctorCount();
-        return ResponseEntity.ok(count);
+    public ResponseEntity<Long> getDoctorCount(HttpServletRequest request) {
+        User user = userService.getLoggedInUser(request);
+        if (user == null || user.getHospital() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(doctorService.getDoctorCount(user.getHospital()));
     }
 
     @PostMapping("/add")
-    public ResponseEntity<?> addDoctor(@RequestBody Doctor doctor) {
+    public ResponseEntity<?> addDoctor(@RequestBody Doctor doctor, HttpServletRequest request) {
+        User user = userService.getLoggedInUser(request);
+        if (user == null || user.getHospital() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+
         if (doctor.getDepartment() == null || doctor.getDepartment().getDepartmentId() == null) {
             return ResponseEntity.badRequest().body("Department ID is required");
         }
 
-        Optional<Department> deptOpt = departmentRepository.findById(doctor.getDepartment().getDepartmentId());
+        Optional<Department> deptOpt = departmentRepository
+                .findByDepartmentIdAndHospital(doctor.getDepartment().getDepartmentId(), user.getHospital());
+
+
         if (deptOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("Invalid department ID");
+            return ResponseEntity.badRequest().body("Invalid department for your hospital");
         }
 
         doctor.setDepartment(deptOpt.get());
+        doctor.setHospital(user.getHospital());
         doctorRepository.save(doctor);
+
         return ResponseEntity.ok("Doctor added successfully");
     }
 
     @GetMapping("/me")
     public ResponseEntity<?> getMyDoctorProfile(Authentication authentication) {
-        System.out.println("🧠 Checking doctor profile for user: " + authentication.getName());
         return doctorRepository.findByUser_Username(authentication.getName())
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Doctor profile not set"));
@@ -75,36 +86,30 @@ public class DoctorController {
             return ResponseEntity.badRequest().body("Doctor name and department name are required");
         }
 
-        // Create or fetch department
-        Department department = departmentRepository
-                .findByDepartmentNameIgnoreCase(dto.getDepartmentName())
-                .orElseGet(() -> departmentRepository.save(new Department(dto.getDepartmentName())));
-
-        // Get the logged-in user
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Check if doctor profile already exists
-        Optional<Doctor> existing = doctorRepository.findByUser_Username(principal.getName());
+        Department department = departmentRepository
+                .findByDepartmentNameIgnoreCaseAndHospital(dto.getDepartmentName(), user.getHospital())
+                .orElseGet(() -> {
+                    Department dep = new Department(dto.getDepartmentName());
+                    dep.setHospital(user.getHospital());
+                    return departmentRepository.save(dep);
+                });
 
-        Doctor doctor;
-        if (existing.isPresent()) {
-            // Update existing profile
-            doctor = existing.get();
-            doctor.setDoctorName(dto.getDoctorName());
-            doctor.setDepartment(department);
-        } else {
-            // Create new profile
-            doctor = Doctor.builder()
-                    .doctorName(dto.getDoctorName())
-                    .department(department)
-                    .user(user)
-                    .build();
-        }
+        Optional<Doctor> existing = doctorRepository.findByUser_Username(principal.getName());
+        Doctor doctor = existing.orElseGet(Doctor::new);
+
+        doctor.setDoctorName(dto.getDoctorName());
+        doctor.setDepartment(department);
+        doctor.setUser(user);
+        doctor.setHospital(user.getHospital());
 
         return ResponseEntity.ok(doctorRepository.save(doctor));
     }
 
-
-
+    @GetMapping("/by-hospital/{id}")
+    public ResponseEntity<List<DoctorDTO>> getDoctorsByHospitalId(@PathVariable Long id) {
+        return ResponseEntity.ok(doctorService.getDoctorsWithDepartmentByHospitalId(id));
+    }
 }

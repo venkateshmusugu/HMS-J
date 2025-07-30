@@ -31,4 +31,25 @@ public class SurgeryLogDto {
         this.reasonForSurgery = appointment.getReason();
         this.medicines = appointment.getMedicineEntries(); // From your current model
     }
+
+    public static class PaymentRequest {
+        private String plan;
+        private String hospitalId;
+
+        public String getPlan() {
+            return plan;
+        }
+
+        public void setPlan(String plan) {
+            this.plan = plan;
+        }
+
+        public String getHospitalId() {
+            return hospitalId;
+        }
+
+        public void setHospitalId(String hospitalId) {
+            this.hospitalId = hospitalId;
+        }
+    }
 }

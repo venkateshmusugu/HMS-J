@@ -1,35 +1,41 @@
 package com.sanjittech.hms.util;
 
+import com.sanjittech.hms.model.License;
+import com.sanjittech.hms.repository.LicenseRepository;
 import io.jsonwebtoken.*;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
+    @Autowired
+    private LicenseRepository licenseRepository;
+
     @Value("${jwt.secret}")
     private String secret;
 
-    // 🔐 Access Token valid for 1 day
     private static final long ACCESS_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 1 day
-
-    // 🔁 Refresh Token valid for 7 days
     private static final long REFRESH_TOKEN_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-    // ✅ Generate access token (with username + role)
-    public String generateAccessToken(String username, String role) {
+
+    public String generateAccessToken(String username, String role, Long hospitalId) {
         return Jwts.builder()
                 .setSubject(username)
                 .claim("role", role)
+                .claim("hospitalId", hospitalId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION_MS))
                 .signWith(SignatureAlgorithm.HS256, secret)
                 .compact();
     }
 
-    // ✅ Generate refresh token (username only)
+    // ✅ Generate Refresh Token
     public String generateRefreshToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
@@ -37,11 +43,6 @@ public class JwtUtil {
                 .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION_MS))
                 .signWith(SignatureAlgorithm.HS256, secret)
                 .compact();
-    }
-
-    // ✅ Extract username from token
-    public String extractUsername(String token) {
-        return extractAllClaims(token).getSubject();
     }
 
     // ✅ Extract all claims
@@ -52,7 +53,20 @@ public class JwtUtil {
                 .getBody();
     }
 
-    // ✅ Validate token (true if valid, false if expired or invalid)
+    public String extractUsername(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
+    }
+
+    public Long extractHospitalId(String token) {
+        final Claims claims = extractAllClaims(token);
+        return claims.get("hospitalId", Long.class);
+    }
+
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
@@ -65,5 +79,25 @@ public class JwtUtil {
             System.out.println("⚠️ Unexpected token error: " + e.getMessage());
         }
         return false;
+    }
+
+    public boolean isLicenseValid(Long hospitalId) {
+        License license = licenseRepository.findByHospital_Id(hospitalId);
+        return license != null && license.isActive() && LocalDate.now().isBefore(license.getEndDate());
+    }
+
+    public String generateToken(String username, String role, Long hospitalId) {
+        return generateAccessToken(username, role, hospitalId);
+    }
+    public Claims extractClaims(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return Jwts.parser()
+                    .setSigningKey(secret) // Make sure this matches your JWT secret
+                    .parseClaimsJws(token)
+                    .getBody();
+        }
+        throw new RuntimeException("Missing or invalid Authorization header");
     }
 }

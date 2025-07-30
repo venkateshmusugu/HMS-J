@@ -1,6 +1,7 @@
     package com.sanjittech.hms.model;
 
     import com.fasterxml.jackson.annotation.JsonIgnore;
+    import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
     import jakarta.persistence.*;
     import lombok.*;
 
@@ -26,6 +27,12 @@
 
         @Column(nullable = false)
         private Double amount;
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "hospital_id")
+        @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+        private Hospital hospital;
+
 
         @OneToMany(mappedBy = "medicine", cascade = CascadeType.ALL)
         @JsonIgnore

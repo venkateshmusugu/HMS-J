@@ -1,12 +1,11 @@
 package com.sanjittech.hms.service;
 
 import com.sanjittech.hms.dto.SurgeryAppointmentDTO;
-import com.sanjittech.hms.model.Doctor;
-import com.sanjittech.hms.model.Patient;
-import com.sanjittech.hms.model.SurgeryAppointment;
+import com.sanjittech.hms.model.*;
 import com.sanjittech.hms.repository.DoctorRepository;
 import com.sanjittech.hms.repository.PatientRepository;
 import com.sanjittech.hms.repository.SurgeryAppointmentRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,9 +26,15 @@ public class SurgeryAppointmentService {
     @Autowired
     private DoctorRepository doctorRepo;
 
-    public SurgeryAppointment bookAppointment(Long patientId, SurgeryAppointmentDTO dto) {
-        Patient patient = patientRepo.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
+    @Autowired
+    private UserService userService;
+
+    public SurgeryAppointment bookAppointment(Long patientId, SurgeryAppointmentDTO dto, HttpServletRequest request) {
+        User user = userService.getLoggedInUser(request);
+        Hospital hospital = user.getHospital();
+
+        Patient patient = patientRepo.findByPatientIdAndHospital(patientId, hospital)
+                .orElseThrow(() -> new RuntimeException("Patient not found in your hospital"));
 
         Doctor doctor = doctorRepo.findById(dto.getDoctorId())
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
@@ -45,44 +50,15 @@ public class SurgeryAppointmentService {
         appointment.setRemarks(dto.getRemarks());
         appointment.setFollowUpDate(dto.getFollowUpDate());
         appointment.setNote(dto.getNote());
+        appointment.setHospital(hospital); // ✅ Set hospital
 
         return appointmentRepo.save(appointment);
     }
 
-    public List<SurgeryAppointment> getAppointmentsByDate(LocalDate date) {
-        return appointmentRepo.findBySurgeryDate(date);
-    }
+    public List<SurgeryAppointmentDTO> getAppointmentsWithDoctorPatientNote(LocalDate date, HttpServletRequest request) {
+        Hospital hospital = userService.getLoggedInUser(request).getHospital();
+        List<SurgeryAppointment> appointments = appointmentRepo.findByHospitalAndSurgeryDate(hospital, date);
 
-    public List<SurgeryAppointment> getAppointmentsByPatient(Long patientId) {
-        return appointmentRepo.findByPatientPatientId(patientId);
-    }
-
-    public void deleteAppointment(Long id) {
-        appointmentRepo.deleteById(id);
-    }
-
-    public SurgeryAppointment getById(Long id) {
-        return appointmentRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
-    }
-
-    public SurgeryAppointment updateAppointment(Long id, SurgeryAppointmentDTO dto) {
-        SurgeryAppointment existing = getById(id);
-
-        existing.setSurgeryDate(dto.getSurgeryDate());
-        existing.setSurgeryTime(LocalTime.parse(dto.getSurgeryTime()));
-        existing.setSurgeryType(dto.getSurgeryType());
-        existing.setStatus(dto.getStatus());
-        existing.setReason(dto.getReasonForSurgery());
-        existing.setRemarks(dto.getRemarks());
-        existing.setFollowUpDate(dto.getFollowUpDate());
-        existing.setNote(dto.getNote());
-
-        return appointmentRepo.save(existing);
-    }
-
-    public List<SurgeryAppointmentDTO> getAppointmentsWithDoctorPatientNote(LocalDate date) {
-        List<SurgeryAppointment> appointments = appointmentRepo.findBySurgeryDate(date);
         return appointments.stream().map(app -> {
             SurgeryAppointmentDTO dto = new SurgeryAppointmentDTO();
             dto.setId(app.getId());
@@ -110,5 +86,34 @@ public class SurgeryAppointmentService {
 
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    public List<SurgeryAppointment> getAppointmentsByPatient(Long patientId, HttpServletRequest request) {
+        Hospital hospital = userService.getLoggedInUser(request).getHospital();
+        return appointmentRepo.findByHospitalAndPatientPatientId(hospital, patientId);
+    }
+
+    public void deleteAppointment(Long id) {
+        appointmentRepo.deleteById(id);
+    }
+
+    public SurgeryAppointment getById(Long id) {
+        return appointmentRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+    }
+
+    public SurgeryAppointment updateAppointment(Long id, SurgeryAppointmentDTO dto) {
+        SurgeryAppointment existing = getById(id);
+
+        existing.setSurgeryDate(dto.getSurgeryDate());
+        existing.setSurgeryTime(LocalTime.parse(dto.getSurgeryTime()));
+        existing.setSurgeryType(dto.getSurgeryType());
+        existing.setStatus(dto.getStatus());
+        existing.setReason(dto.getReasonForSurgery());
+        existing.setRemarks(dto.getRemarks());
+        existing.setFollowUpDate(dto.getFollowUpDate());
+        existing.setNote(dto.getNote());
+
+        return appointmentRepo.save(existing);
     }
 }

@@ -40,6 +40,12 @@ public class MedicalBillService {
         if (bill.getCreatedDate() == null) bill.setCreatedDate(LocalDate.now());
         if (bill.getCreatedTime() == null) bill.setCreatedTime(LocalTime.now());
 
+        if (bill.getHospital() == null || bill.getHospital().getId() == null) {
+            throw new RuntimeException("Hospital information is missing in the bill");
+        }
+
+        Long hospitalId = bill.getHospital().getId();
+
         if (bill.getEntries() != null && !bill.getEntries().isEmpty()) {
             Set<String> uniqueMedKeys = new HashSet<>();
 
@@ -63,7 +69,7 @@ public class MedicalBillService {
                 Double amount = medicine.getAmount();
 
                 if (name == null || dosage == null || amount == null) {
-                    throw new RuntimeException("Medicine is incomplete: " + medicine);
+                    throw new RuntimeException("Incomplete medicine data: " + medicine);
                 }
 
                 String medKey = (name + "|" + dosage).toLowerCase();
@@ -71,18 +77,20 @@ public class MedicalBillService {
                     throw new RuntimeException("Duplicate medicine entry: " + name + " " + dosage);
                 }
 
-                Optional<Medicine> existing = medicineRepo.findByNameIgnoreCaseAndDosageIgnoreCase(name, dosage);
+                Optional<Medicine> existing = medicineRepo.findByHospitalIdAndNameIgnoreCaseAndDosageIgnoreCase(
+                        hospitalId, name, dosage);
 
                 Medicine medToUse = existing.orElseGet(() -> {
                     medicine.setName(name);
                     medicine.setDosage(dosage);
+                    medicine.setHospital(bill.getHospital()); // ✅ Make sure hospital is set
                     return medicineRepo.save(medicine);
                 });
 
                 entry.setMedicine(medToUse);
                 entry.setSubtotal(medToUse.getAmount() * entry.getIssuedQuantity());
 
-                // ✅ Set transient fields
+                // ✅ Populate transient fields
                 entry.setMedicineName(medToUse.getName());
                 entry.setDosage(medToUse.getDosage());
                 entry.setAmount(medToUse.getAmount());
@@ -91,6 +99,8 @@ public class MedicalBillService {
 
         return billRepo.save(bill);
     }
+
+
 
 
 
